@@ -72,3 +72,17 @@ def test_array_columns_default_to_empty_list():
         # Clean up
         session.delete(fetched)
         session.commit()
+
+
+from app.models import Ingredient as _Ingredient
+
+
+def test_ingredient_round_trips(db_session):
+    ing = _Ingredient(canonical_name="all-purpose flour", aliases=["AP flour", "plain flour"])
+    db_session.add(ing)
+    db_session.flush()
+
+    fetched = db_session.get(_Ingredient, ing.id)
+    assert fetched is not None
+    assert fetched.canonical_name == "all-purpose flour"
+    assert "AP flour" in fetched.aliases
