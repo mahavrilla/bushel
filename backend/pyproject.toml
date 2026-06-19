@@ -9,6 +9,9 @@ dependencies = [
     "psycopg[binary]>=3.1",
     "alembic>=1.13",
     "pydantic-settings>=2.2",
+    "recipe-scrapers>=15.0",
+    "ingredient-parser-nlp>=1.1",
+    "anthropic>=0.40",
 ]
 
 [dependency-groups]
