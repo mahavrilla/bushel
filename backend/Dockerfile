@@ -1,13 +1,13 @@
 FROM python:3.12-slim
 
 # Install uv (fast Python package manager).
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.11.23 /uv /uvx /bin/
 
 WORKDIR /app
 
 # Install dependencies first for layer caching.
-COPY pyproject.toml ./
-RUN uv sync --no-dev --no-install-project
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
 
 # Copy the application.
 COPY alembic.ini ./
