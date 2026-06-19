@@ -69,3 +69,11 @@ def test_ingredient_round_trips(db_session):
     assert fetched is not None
     assert fetched.canonical_name == "all-purpose flour"
     assert fetched.aliases == ["AP flour", "plain flour"]
+
+
+def test_recipe_ingredient_has_needs_review():
+    from app.models import RecipeIngredient
+
+    cols = RecipeIngredient.__table__.columns
+    assert "needs_review" in cols
+    assert cols["needs_review"].default.arg is False
