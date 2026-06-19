@@ -1,8 +1,5 @@
-import os
-
 import pytest
 
-from app.db import Base, SessionLocal, engine
 from app.models import (
     GroceryList,
     GroceryListItem,
@@ -43,46 +40,32 @@ def test_grocery_list_item_tracks_total_and_purchase_qty():
     assert "pantry_status" in cols
 
 
-def test_array_columns_default_to_empty_list():
+def test_array_columns_default_to_empty_list(db_session):
     """
     Regression test: Ingredient.aliases uses default=list (Python-side) with no server_default.
     Verify that inserting without explicitly setting aliases results in [] (not a NOT NULL error).
     This proves the ORM applies the Python default on INSERT, so no server_default is required.
     """
-    # Ensure tables exist
-    Base.metadata.create_all(engine)
+    # Insert WITHOUT setting aliases
+    ing = Ingredient(canonical_name="salt_test_array_default")
+    db_session.add(ing)
+    db_session.flush()
+    db_session.expire_all()
 
-    with SessionLocal() as session:
-        # Clean up any leftover test data from prior runs
-        session.query(Ingredient).filter_by(canonical_name="salt_test_array_default").delete()
-        session.commit()
-
-        # Insert WITHOUT setting aliases
-        ing = Ingredient(canonical_name="salt_test_array_default")
-        session.add(ing)
-        session.commit()
-
-        # Query it back fresh
-        fetched = session.query(Ingredient).filter_by(canonical_name="salt_test_array_default").one()
-        assert fetched.aliases == [], (
-            f"Expected aliases == [], got {fetched.aliases!r}. "
-            "The Python-side default=list should be applied by the ORM on INSERT."
-        )
-
-        # Clean up
-        session.delete(fetched)
-        session.commit()
-
-
-from app.models import Ingredient as _Ingredient
+    fetched = db_session.get(Ingredient, ing.id)
+    assert fetched.aliases == [], (
+        f"Expected aliases == [], got {fetched.aliases!r}. "
+        "The Python-side default=list should be applied by the ORM on INSERT."
+    )
 
 
 def test_ingredient_round_trips(db_session):
-    ing = _Ingredient(canonical_name="all-purpose flour", aliases=["AP flour", "plain flour"])
+    ing = Ingredient(canonical_name="all-purpose flour", aliases=["AP flour", "plain flour"])
     db_session.add(ing)
     db_session.flush()
+    db_session.expire_all()
 
-    fetched = db_session.get(_Ingredient, ing.id)
+    fetched = db_session.get(Ingredient, ing.id)
     assert fetched is not None
     assert fetched.canonical_name == "all-purpose flour"
-    assert "AP flour" in fetched.aliases
+    assert fetched.aliases == ["AP flour", "plain flour"]
