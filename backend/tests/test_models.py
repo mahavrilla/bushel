@@ -3,6 +3,7 @@ import pytest
 from app.models import (
     GroceryList,
     GroceryListItem,
+    GroceryListRecipe,
     Ingredient,
     IngredientProductMap,
     KrogerAuth,
@@ -20,6 +21,7 @@ def test_all_models_have_tablenames():
         IngredientProductMap: "ingredient_product_map",
         GroceryList: "grocery_lists",
         GroceryListItem: "grocery_list_items",
+        GroceryListRecipe: "grocery_list_recipes",
         PurchaseLog: "purchase_log",
         KrogerAuth: "kroger_auth",
     }
