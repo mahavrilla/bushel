@@ -6,6 +6,7 @@ consulted once, batched, only for names with no local match.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 
 from sqlalchemy import select
@@ -14,6 +15,8 @@ from sqlalchemy.orm import Session
 from app.ingredients.normalize import normalize_name
 from app.llm.client import LLMClient, LLMUnavailableError
 from app.models import Ingredient
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -31,7 +34,9 @@ def _lookup(normalized: str, ingredients: list[Ingredient]) -> Ingredient | None
     return None
 
 
-def _create_new(db: Session, canonical_name: str, category=None, purchase_unit=None) -> Ingredient:
+def _create_new(
+    db: Session, canonical_name: str, category: str | None = None, purchase_unit: str | None = None
+) -> Ingredient:
     ing = Ingredient(
         canonical_name=canonical_name,
         aliases=[],
@@ -81,6 +86,11 @@ def canonicalize_names(
                     db.flush()
                 results[q] = CanonResult(ingredient_id=existing.id, is_new=False)
                 continue
+            logger.warning(
+                "LLM returned alias_of=%s for %r but no such ingredient exists; creating new",
+                decision.alias_of,
+                q,
+            )
         if decision is not None and decision.new is not None:
             created = _create_new(
                 db,

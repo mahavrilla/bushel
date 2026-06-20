@@ -84,3 +84,22 @@ def test_llm_unavailable_creates_new_flagged(db_session):
     assert results["dragonfruit"].is_new is True
     created = db_session.get(Ingredient, results["dragonfruit"].ingredient_id)
     assert created.canonical_name == "dragonfruit"
+
+
+def test_stale_alias_of_creates_new_and_warns(db_session, caplog):
+    import logging
+
+    from app.llm.client import CanonicalizeOne, CanonicalizeResult
+
+    llm = MagicMock()
+    llm.canonicalize_ingredients.return_value = CanonicalizeResult(
+        results=[CanonicalizeOne(query="mystery", alias_of=999999)]  # nonexistent id
+    )
+
+    with caplog.at_level(logging.WARNING):
+        results = canonicalize_names(["mystery"], db_session, llm)
+
+    assert results["mystery"].is_new is True
+    created = db_session.get(Ingredient, results["mystery"].ingredient_id)
+    assert created.canonical_name == "mystery"
+    assert any("alias_of" in r.message for r in caplog.records)
