@@ -24,12 +24,13 @@ def _build_recipe(
     db.add(recipe)
     db.flush()
 
+    # canon is keyed by ingredient name; lines that share a name share one entry.
     for raw, p in parsed:
         result = canon[p.name]
         needs_review = (
             p.source == _LOW_CONFIDENCE_SOURCE
             or p.source == "llm"
-            or p.qty is None
+            or p.qty is None  # unparseable quantity
             or result.is_new
         )
         db.add(

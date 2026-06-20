@@ -51,12 +51,15 @@ def _create_new(
 def canonicalize_names(
     queries: list[str], db: Session, llm: LLMClient
 ) -> dict[str, CanonResult]:
+    # De-duplicate so each unique name is resolved/created exactly once; callers
+    # look up results by name, so duplicate input lines share one result.
+    unique_queries = list(dict.fromkeys(queries))
     ingredients = list(db.execute(select(Ingredient)).scalars())
     results: dict[str, CanonResult] = {}
     misses: list[str] = []
     miss_normalized: dict[str, str] = {}
 
-    for q in queries:
+    for q in unique_queries:
         normalized = normalize_name(q)
         hit = _lookup(normalized, ingredients)
         if hit is not None:

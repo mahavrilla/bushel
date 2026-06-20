@@ -103,3 +103,31 @@ def test_stale_alias_of_creates_new_and_warns(db_session, caplog):
     created = db_session.get(Ingredient, results["mystery"].ingredient_id)
     assert created.canonical_name == "mystery"
     assert any("alias_of" in r.message for r in caplog.records)
+
+
+def test_duplicate_new_query_creates_one_ingredient(db_session):
+    from app.models import Ingredient as _Ing
+    from sqlalchemy import func, select as _select
+
+    llm = MagicMock()
+    llm.canonicalize_ingredients.return_value = CanonicalizeResult(
+        results=[
+            CanonicalizeOne(
+                query="flour",
+                new=NewIngredientLLM(canonical_name="flour", category="baking", default_purchase_unit="bag"),
+            )
+        ]
+    )
+
+    results = canonicalize_names(["flour", "flour"], db_session, llm)
+
+    # both duplicate inputs resolve to the same result
+    assert results["flour"].is_new is True
+    # exactly ONE "flour" ingredient row was created, not two
+    count = db_session.execute(
+        _select(func.count()).select_from(_Ing).where(_Ing.canonical_name == "flour")
+    ).scalar()
+    assert count == 1
+    # and the LLM was asked about the unique name only once (one query in the batch)
+    args, _ = llm.canonicalize_ingredients.call_args
+    assert args[0] == ["flour"]
