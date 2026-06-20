@@ -23,4 +23,3 @@ def test_manual_request_drops_blank_lines():
 def test_ingredient_update_all_optional():
     upd = IngredientUpdate(qty=3.0)
     assert upd.qty == 3.0
-    assert upd.name is None

@@ -30,7 +30,6 @@ class ManualRecipeRequest(BaseModel):
 class IngredientUpdate(BaseModel):
     qty: float | None = None
     unit: str | None = None
-    name: str | None = None
     ingredient_id: int | None = None
 
 

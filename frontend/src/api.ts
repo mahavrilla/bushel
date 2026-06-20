@@ -46,7 +46,7 @@ export async function listRecipes(): Promise<RecipeSummary[]> {
 export async function updateIngredient(
   recipeId: number,
   rowId: number,
-  patch: { qty?: number; unit?: string; name?: string; ingredient_id?: number },
+  patch: { qty?: number; unit?: string; ingredient_id?: number },
 ): Promise<RecipeRead> {
   const res = await fetch(`${BASE_URL}/recipes/${recipeId}/ingredients/${rowId}`, {
     method: "PATCH",
