@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { listRecipes } from "../api";
+import { addRecipeToList, listRecipes } from "../api";
 import type { RecipeSummary } from "./types";
 
 export function RecipeList({ onOpen }: { onOpen: (id: number) => void }) {
@@ -21,6 +21,9 @@ export function RecipeList({ onOpen }: { onOpen: (id: number) => void }) {
         <li key={r.id}>
           <button onClick={() => onOpen(r.id)}>
             {r.title} ({r.servings} servings)
+          </button>
+          <button aria-label={`Add ${r.title} to list`} onClick={() => addRecipeToList(r.id)}>
+            Add to list
           </button>
         </li>
       ))}

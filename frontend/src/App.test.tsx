@@ -25,4 +25,9 @@ describe("App", () => {
     render(<App />);
     expect(await screen.findByRole("button", { name: /add recipe/i })).toBeInTheDocument();
   });
+
+  it("has a Grocery List nav entry", async () => {
+    render(<App />);
+    expect(await screen.findByRole("button", { name: /grocery list/i })).toBeInTheDocument();
+  });
 });
