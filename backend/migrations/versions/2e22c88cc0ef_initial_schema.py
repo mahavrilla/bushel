@@ -99,8 +99,8 @@ def upgrade() -> None:
     sa.Column('qty', sa.Float(), nullable=True),
     sa.Column('unit', sa.String(length=50), nullable=True),
     sa.Column('ingredient_id', sa.Integer(), nullable=True),
-    sa.Column('parse_source', sa.String(length=30), nullable=False),
-    sa.ForeignKeyConstraint(['ingredient_id'], ['ingredients.id'], ondelete='SET NULL', deferrable=True, initially='DEFERRED'),
+    sa.Column('parse_source', sa.String(length=20), nullable=False),
+    sa.ForeignKeyConstraint(['ingredient_id'], ['ingredients.id'], ondelete='SET NULL'),
     sa.ForeignKeyConstraint(['recipe_id'], ['recipes.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )

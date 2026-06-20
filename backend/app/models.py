@@ -45,8 +45,7 @@ class RecipeIngredient(Base):
     qty: Mapped[float | None] = mapped_column(Float, nullable=True)
     unit: Mapped[str | None] = mapped_column(String(50), nullable=True)
     ingredient_id: Mapped[int | None] = mapped_column(
-        ForeignKey("ingredients.id", ondelete="SET NULL", deferrable=True, initially="DEFERRED"),
-        nullable=True,
+        ForeignKey("ingredients.id", ondelete="SET NULL"), nullable=True
     )
     parse_source: Mapped[str] = mapped_column(String(30), default="library")
     needs_review: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")

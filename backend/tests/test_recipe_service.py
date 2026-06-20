@@ -20,7 +20,8 @@ def test_manual_create_persists_recipe_and_flags(mock_parse, db_session):
     llm = MagicMock()
     flour = Ingredient(canonical_name="all purpose flour", aliases=[])
     egg = Ingredient(canonical_name="egg", aliases=[])
-    db_session.add_all([flour, egg])
+    saffron = Ingredient(canonical_name="saffron", aliases=[])
+    db_session.add_all([flour, egg, saffron])
     db_session.flush()
 
     from app.ingredients.canonicalize import CanonResult
@@ -29,7 +30,7 @@ def test_manual_create_persists_recipe_and_flags(mock_parse, db_session):
         mock_canon.return_value = {
             "all-purpose flour": CanonResult(flour.id, False),
             "egg": CanonResult(egg.id, False),
-            "saffron": CanonResult(999, True),
+            "saffron": CanonResult(saffron.id, True),
         }
         recipe = create_from_manual(
             title="Test",
