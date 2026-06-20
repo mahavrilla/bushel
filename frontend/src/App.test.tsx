@@ -5,22 +5,24 @@ import { App } from "./App";
 
 describe("App", () => {
   beforeEach(() => {
-    vi.spyOn(global, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ status: "ok" }), { status: 200 }),
-    );
+    vi.spyOn(global, "fetch").mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes("/health")) {
+        return Promise.resolve(new Response(JSON.stringify({ status: "ok" }), { status: 200 }));
+      }
+      return Promise.resolve(new Response("[]", { status: 200 }));
+    });
   });
+  afterEach(() => vi.restoreAllMocks());
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("renders the Bushel title", async () => {
+  it("renders the Bushel title and the recipe library by default", async () => {
     render(<App />);
     expect(await screen.findByRole("heading", { name: /bushel/i })).toBeInTheDocument();
+    expect(await screen.findByText(/no recipes yet/i)).toBeInTheDocument();
   });
 
-  it("shows backend status once health resolves", async () => {
+  it("has a way to navigate to add-recipe", async () => {
     render(<App />);
-    expect(await screen.findByText(/backend: ok/i)).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /add recipe/i })).toBeInTheDocument();
   });
 });
