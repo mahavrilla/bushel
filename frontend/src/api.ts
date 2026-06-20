@@ -1,4 +1,4 @@
-import type { RecipeRead, RecipeSummary } from "./recipes/types";
+import type { GroceryListData, RecipeRead, RecipeSummary } from "./recipes/types";
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
@@ -54,4 +54,37 @@ export async function updateIngredient(
     body: JSON.stringify(patch),
   });
   return json<RecipeRead>(res);
+}
+
+export async function getList(): Promise<GroceryListData> {
+  return json<GroceryListData>(await fetch(`${BASE_URL}/list`, undefined));
+}
+
+export async function addRecipeToList(
+  recipeId: number,
+  servings?: number,
+): Promise<GroceryListData> {
+  const res = await fetch(`${BASE_URL}/list/recipes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ recipe_id: recipeId, servings }),
+  });
+  return json<GroceryListData>(res);
+}
+
+export async function updateListServings(
+  recipeId: number,
+  servings: number,
+): Promise<GroceryListData> {
+  const res = await fetch(`${BASE_URL}/list/recipes/${recipeId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ servings }),
+  });
+  return json<GroceryListData>(res);
+}
+
+export async function removeRecipeFromList(recipeId: number): Promise<GroceryListData> {
+  const res = await fetch(`${BASE_URL}/list/recipes/${recipeId}`, { method: "DELETE" });
+  return json<GroceryListData>(res);
 }
