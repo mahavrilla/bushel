@@ -13,6 +13,7 @@ dependencies = [
     "recipe-scrapers>=15.0",
     "ingredient-parser-nlp>=1.1",
     "anthropic>=0.40",
+    "pint>=0.23",
 ]
 
 [dependency-groups]
