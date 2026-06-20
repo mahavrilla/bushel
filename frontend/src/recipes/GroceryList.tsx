@@ -19,6 +19,16 @@ function RecipeRow({
 }) {
   const [servings, setServings] = useState(recipe.servings.toString());
 
+  useEffect(() => {
+    setServings(recipe.servings.toString());
+  }, [recipe.servings]);
+
+  async function handleUpdate() {
+    const n = Number(servings);
+    if (servings.trim() === "" || !Number.isFinite(n)) return;
+    onChange(await updateListServings(recipe.recipe_id, n));
+  }
+
   return (
     <li>
       <span>{recipe.title}</span>
@@ -27,7 +37,7 @@ function RecipeRow({
         value={servings}
         onChange={(e) => setServings(e.target.value)}
       />
-      <button aria-label={`Update ${recipe.title}`} onClick={async () => onChange(await updateListServings(recipe.recipe_id, Number(servings)))}>
+      <button aria-label={`Update ${recipe.title}`} onClick={handleUpdate}>
         Update
       </button>
       <button aria-label={`Remove ${recipe.title}`} onClick={async () => onChange(await removeRecipeFromList(recipe.recipe_id))}>
