@@ -8,6 +8,9 @@ class Settings(BaseSettings):
 
     database_url: str
 
+    # Browser origins allowed to call the API (the Vite dev server / web container).
+    cors_origins: list[str] = ["http://localhost:5173"]
+
     # Populated in later phases; optional so the app boots without them.
     kroger_client_id: str = ""
     kroger_client_secret: str = ""
