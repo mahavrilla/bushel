@@ -77,3 +77,13 @@ def test_recipe_ingredient_has_needs_review():
     cols = RecipeIngredient.__table__.columns
     assert "needs_review" in cols
     assert cols["needs_review"].default.arg is False
+
+
+def test_grocery_list_recipe_model():
+    from app.models import GroceryListRecipe
+
+    cols = GroceryListRecipe.__table__.columns
+    assert GroceryListRecipe.__tablename__ == "grocery_list_recipes"
+    assert {"id", "list_id", "recipe_id", "servings"} <= set(cols.keys())
+    uniques = [c for c in GroceryListRecipe.__table__.constraints if c.__class__.__name__ == "UniqueConstraint"]
+    assert any({col.name for col in u.columns} == {"list_id", "recipe_id"} for u in uniques)

@@ -8,6 +8,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import ARRAY
@@ -114,3 +115,13 @@ class KrogerAuth(Base):
     refresh_token: Mapped[str] = mapped_column(Text)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     scopes: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
+
+
+class GroceryListRecipe(Base):
+    __tablename__ = "grocery_list_recipes"
+    __table_args__ = (UniqueConstraint("list_id", "recipe_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    list_id: Mapped[int] = mapped_column(ForeignKey("grocery_lists.id", ondelete="CASCADE"))
+    recipe_id: Mapped[int] = mapped_column(ForeignKey("recipes.id", ondelete="CASCADE"))
+    servings: Mapped[int] = mapped_column(Integer)
