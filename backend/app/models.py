@@ -8,9 +8,10 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -87,6 +88,7 @@ class GroceryListItem(Base):
     purchase_qty: Mapped[int] = mapped_column(Integer, default=1)
     kroger_upc: Mapped[str | None] = mapped_column(String(50), nullable=True)
     source_recipe_ids: Mapped[list[int]] = mapped_column(ARRAY(Integer), default=list)
+    quantities: Mapped[list] = mapped_column(JSONB, default=list, server_default="[]")
     pantry_status: Mapped[str] = mapped_column(String(20), default="needed")
 
 
@@ -114,3 +116,13 @@ class KrogerAuth(Base):
     refresh_token: Mapped[str] = mapped_column(Text)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     scopes: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
+
+
+class GroceryListRecipe(Base):
+    __tablename__ = "grocery_list_recipes"
+    __table_args__ = (UniqueConstraint("list_id", "recipe_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    list_id: Mapped[int] = mapped_column(ForeignKey("grocery_lists.id", ondelete="CASCADE"))
+    recipe_id: Mapped[int] = mapped_column(ForeignKey("recipes.id", ondelete="CASCADE"))
+    servings: Mapped[int] = mapped_column(Integer)
