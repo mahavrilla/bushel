@@ -89,3 +89,9 @@ def test_grocery_list_recipe_model():
     assert {"id", "list_id", "recipe_id", "servings"} <= set(cols.keys())
     uniques = [c for c in GroceryListRecipe.__table__.constraints if c.__class__.__name__ == "UniqueConstraint"]
     assert any({col.name for col in u.columns} == {"list_id", "recipe_id"} for u in uniques)
+
+
+def test_grocery_list_item_has_quantities():
+    from app.models import GroceryListItem
+
+    assert "quantities" in GroceryListItem.__table__.columns
