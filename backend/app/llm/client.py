@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import anthropic
 from pydantic import BaseModel
+from typing import TypeVar
 
 from app.config import get_settings
+
+_T = TypeVar("_T", bound=BaseModel)
 
 MODEL = "claude-haiku-4-5"
 
@@ -56,7 +59,7 @@ class LLMClient:
             self._client = anthropic.Anthropic(api_key=self._api_key)
         return self._client
 
-    def _parse(self, *, system: str, user: str, output_format: type[BaseModel], max_tokens: int):
+    def _parse(self, *, system: str, user: str, output_format: type[_T], max_tokens: int) -> _T:
         client = self._ensure()
         try:
             resp = client.messages.parse(
