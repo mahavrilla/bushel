@@ -1,3 +1,4 @@
+import pytest
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -38,8 +39,5 @@ def test_unsupported_site_falls_back_to_llm(mock_scrape, _fetch):
 def test_unsupported_and_llm_unavailable_raises(mock_scrape, _fetch):
     llm = MagicMock()
     llm.scrape_recipe.side_effect = LLMUnavailableError("no key")
-    try:
+    with pytest.raises(ScrapeError):
         scrape_url("https://blog.example/bread", llm)
-        assert False, "expected ScrapeError"
-    except ScrapeError:
-        pass

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 
@@ -9,6 +10,8 @@ import requests
 from recipe_scrapers import scrape_html
 
 from app.llm.client import LLMClient, LLMUnavailableError
+
+logger = logging.getLogger(__name__)
 
 _HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; BushelBot/1.0)"}
 _DIGITS = re.compile(r"\d+")
@@ -53,8 +56,8 @@ def scrape_url(url: str, llm: LLMClient) -> ScrapedRecipe:
                 servings=_yields_to_int(scraper.yields()),
                 raw_lines=lines,
             )
-    except Exception:  # noqa: BLE001 — library raises various site-specific errors
-        pass
+    except Exception as exc:  # noqa: BLE001 — library raises various site-specific errors
+        logger.debug("recipe-scrapers could not parse %s: %s", url, exc)
 
     try:
         llm_result = llm.scrape_recipe(html, url)
