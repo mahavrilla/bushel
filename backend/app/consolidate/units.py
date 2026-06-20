@@ -7,7 +7,7 @@ units pint can't parse stay in their own group keyed by the unit string; count i
 
 from __future__ import annotations
 
-from pint import UndefinedUnitError, UnitRegistry
+from pint import UnitRegistry
 
 _ureg = UnitRegistry()
 
@@ -40,15 +40,17 @@ _ALIASES = {
 def _normalize_unit(unit: str | None) -> str | None:
     if unit is None:
         return None
-    stripped = unit.strip()
-    if not stripped:
+    raw = unit.strip()
+    if not raw:
         return None
-    # Check case-sensitive aliases first (e.g. capital T = tablespoon).
-    if stripped in _ALIASES_CASE_SENSITIVE:
-        return _ALIASES_CASE_SENSITIVE[stripped]
-    key = stripped.lower()
-    base = key[:-1] if key.endswith("s") and key[:-1] in _ALIASES else key
-    return _ALIASES.get(base, _ALIASES.get(key, base if base in _ALIASES else key))
+    # Case-sensitive first: capital "T" is tablespoon, lowercase "t" is teaspoon.
+    if raw in _ALIASES_CASE_SENSITIVE:
+        return _ALIASES_CASE_SENSITIVE[raw]
+    key = raw.lower()
+    # Collapse a trailing plural "s" so "cloves"->"clove", "cups"->"cup", "lbs"->"lb".
+    if key.endswith("s") and not key.endswith("ss") and len(key) > 1:
+        key = key[:-1]
+    return _ALIASES.get(key, key)
 
 
 def consolidate(items: list[tuple[float | None, str | None]]) -> list[dict]:
@@ -89,7 +91,7 @@ def consolidate(items: list[tuple[float | None, str | None]]) -> list[dict]:
                 converted = q.to(g["unit"]).magnitude
                 if g["qty"] is not None:
                     g["qty"] += converted
-        except (UndefinedUnitError, Exception):  # noqa: BLE001 — pint raises several types for bad units
+        except Exception:  # noqa: BLE001 — pint raises several types (UndefinedUnitError, DimensionalityError, ...) for non-units
             key = ("str", unit)
             g = find(key)
             if g is None:

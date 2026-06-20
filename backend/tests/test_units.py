@@ -54,3 +54,20 @@ def test_rounding():
 
 def test_empty_input():
     assert consolidate([]) == []
+
+
+def test_plural_unparseable_unit_consolidates():
+    # "cloves" and "clove" are the same unit and must sum
+    result = consolidate([(2.0, "cloves"), (1.0, "clove")])
+    assert result == [{"qty": 3.0, "unit": "clove"}]
+
+
+def test_plural_parseable_unit_consolidates():
+    result = consolidate([(1.0, "tablespoons"), (1.0, "tablespoon")])
+    assert len(result) == 1
+    assert result[0]["qty"] == 2.0
+
+
+def test_duplicate_none_qty_single_entry():
+    result = consolidate([(None, "pinch"), (None, "pinch")])
+    assert result == [{"qty": None, "unit": "pinch"}]
