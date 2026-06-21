@@ -41,4 +41,11 @@ describe("RecipeList", () => {
       ),
     );
   });
+
+  it("offers an Add recipe action in the header", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response("[]", { status: 200 }));
+    renderWithRouter(<RecipeList />);
+    const add = await screen.findByRole("link", { name: /add recipe/i });
+    expect(add).toHaveAttribute("href", "/recipes/new");
+  });
 });
