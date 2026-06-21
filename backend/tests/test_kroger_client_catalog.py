@@ -1,6 +1,7 @@
 import httpx
+import pytest
 
-from app.kroger.client import KrogerClient
+from app.kroger.client import KrogerClient, KrogerUnavailableError
 
 
 def _client(handler):
@@ -43,3 +44,22 @@ def test_search_products_parses_first_item_fields():
     assert prods[1].upc == "0002"
     assert prods[1].size is None
     assert prods[1].price is None
+
+
+def test_search_products_skips_records_missing_upc():
+    def handler(request):
+        return httpx.Response(200, json={"data": [
+            {"description": "No UPC here"},  # malformed record -> skipped, not crashed
+            {"upc": "0001", "description": "Flour", "items": []},
+        ]})
+
+    prods = _client(handler).search_products("tok", "flour", "L1")
+    assert [p.upc for p in prods] == ["0001"]
+
+
+def test_search_products_5xx_raises_unavailable():
+    def handler(request):
+        return httpx.Response(500, json={})
+
+    with pytest.raises(KrogerUnavailableError):
+        _client(handler).search_products("tok", "flour", "L1")

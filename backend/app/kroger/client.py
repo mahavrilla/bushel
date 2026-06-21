@@ -106,11 +106,14 @@ class KrogerClient:
         self._raise_for_status(resp)
         out: list[Location] = []
         for row in resp.json().get("data", []):
+            location_id = row.get("locationId")
+            if not location_id:  # skip malformed records rather than crash the whole list
+                continue
             addr = row.get("address", {})
             parts = [addr.get("addressLine1"), addr.get("city"), addr.get("state"), addr.get("zipCode")]
             out.append(
                 Location(
-                    location_id=row["locationId"],
+                    location_id=location_id,
                     name=row.get("name", ""),
                     address=", ".join(p for p in parts if p),
                 )
@@ -139,13 +142,16 @@ class KrogerClient:
         self._raise_for_status(resp)
         out: list[Product] = []
         for row in resp.json().get("data", []):
+            upc = row.get("upc")
+            if not upc:  # skip malformed records rather than crash the whole list
+                continue
             items = row.get("items") or []
             first = items[0] if items else {}
             price = (first.get("price") or {}).get("regular")
             stock = (first.get("inventory") or {}).get("stockLevel")
             out.append(
                 Product(
-                    upc=row["upc"],
+                    upc=upc,
                     description=row.get("description", ""),
                     size=first.get("size"),
                     price=price,
