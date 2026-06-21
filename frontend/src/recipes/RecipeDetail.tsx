@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 
 import { getRecipe, updateIngredient } from "../api";
 import type { IngredientRead, RecipeRead } from "./types";
@@ -39,7 +40,9 @@ function Row({
   );
 }
 
-export function RecipeDetail({ recipeId }: { recipeId: number }) {
+export function RecipeDetail() {
+  const { id } = useParams();
+  const recipeId = Number(id);
   const [recipe, setRecipe] = useState<RecipeRead | null>(null);
 
   useEffect(() => {

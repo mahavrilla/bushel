@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 import { addRecipeToList, listRecipes } from "../api";
 import type { RecipeSummary } from "./types";
 
-export function RecipeList({ onOpen }: { onOpen: (id: number) => void }) {
+export function RecipeList() {
   const [recipes, setRecipes] = useState<RecipeSummary[] | null>(null);
 
   useEffect(() => {
@@ -19,9 +20,9 @@ export function RecipeList({ onOpen }: { onOpen: (id: number) => void }) {
     <ul>
       {recipes.map((r) => (
         <li key={r.id}>
-          <button onClick={() => onOpen(r.id)}>
+          <Link to={`/recipes/${r.id}`}>
             {r.title} ({r.servings} servings)
-          </button>
+          </Link>
           <button aria-label={`Add ${r.title} to list`} onClick={() => addRecipeToList(r.id)}>
             Add to list
           </button>

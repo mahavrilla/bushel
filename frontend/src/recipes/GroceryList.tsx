@@ -55,7 +55,14 @@ export function GroceryList() {
   }, []);
 
   if (list === null) return <p>Loading…</p>;
-  if (list.recipes.length === 0) return <p>No recipes on your list yet. Add some from the Recipes tab.</p>;
+
+  if (list.recipes.length === 0)
+    return (
+      <div>
+        <h2>Grocery List</h2>
+        <p>No recipes on your list yet. Add some from the Recipes tab.</p>
+      </div>
+    );
 
   return (
     <div>

@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { createRecipe, importRecipe } from "../api";
 
-export function AddRecipe({ onCreated }: { onCreated: (id: number) => void }) {
+export function AddRecipe() {
+  const navigate = useNavigate();
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [servings, setServings] = useState(1);
@@ -15,7 +17,7 @@ export function AddRecipe({ onCreated }: { onCreated: (id: number) => void }) {
     setError(null);
     try {
       const recipe = await action();
-      onCreated(recipe.id);
+      navigate(`/recipes/${recipe.id}`);
     } catch {
       setError("Couldn't import — check the URL or try manual entry.");
     } finally {

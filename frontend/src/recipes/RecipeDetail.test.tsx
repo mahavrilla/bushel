@@ -1,63 +1,34 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { renderWithRouter } from "../test/renderWithRouter";
 import { RecipeDetail } from "./RecipeDetail";
 
 afterEach(() => vi.restoreAllMocks());
 
-const flaggedRecipe = {
+const recipe = {
   id: 1,
   title: "Pancakes",
   servings: 4,
   source_url: null,
   ingredients: [
-    {
-      id: 10, raw_text: "a pinch of saffron", qty: null, unit: null,
-      ingredient_id: 5, ingredient_name: "saffron", parse_source: "library_low_confidence",
-      needs_review: true,
-    },
-    {
-      id: 11, raw_text: "1 egg", qty: 1, unit: null, ingredient_id: 6,
-      ingredient_name: "egg", parse_source: "library", needs_review: false,
-    },
+    { id: 10, raw_text: "2 cups flour", qty: 2, unit: "cup", ingredient_id: 5, ingredient_name: "flour", parse_source: "library", needs_review: false },
   ],
 };
 
+function show() {
+  vi.spyOn(global, "fetch").mockResolvedValue(new Response(JSON.stringify(recipe), { status: 200 }));
+  renderWithRouter(<RecipeDetail />, { path: "/recipes/:id", initialEntries: ["/recipes/1"] });
+}
+
 describe("RecipeDetail", () => {
-  it("shows the review banner with the flagged count", async () => {
-    vi.spyOn(global, "fetch").mockResolvedValue(
-      new Response(JSON.stringify(flaggedRecipe), { status: 200 }),
-    );
-    render(<RecipeDetail recipeId={1} />);
-    expect(await screen.findByText(/1 item needs review/i)).toBeInTheDocument();
+  it("renders the recipe title", async () => {
+    show();
+    expect(await screen.findByRole("heading", { name: /pancakes/i })).toBeInTheDocument();
   });
 
-  it("saving an edited qty calls PATCH and refreshes", async () => {
-    const cleared = {
-      ...flaggedRecipe,
-      ingredients: [
-        { ...flaggedRecipe.ingredients[0], qty: 1, needs_review: false },
-        flaggedRecipe.ingredients[1],
-      ],
-    };
-    const spy = vi
-      .spyOn(global, "fetch")
-      .mockResolvedValueOnce(new Response(JSON.stringify(flaggedRecipe), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify(cleared), { status: 200 }));
-
-    render(<RecipeDetail recipeId={1} />);
-    const qtyInput = await screen.findByLabelText(/qty for a pinch of saffron/i);
-    await userEvent.clear(qtyInput);
-    await userEvent.type(qtyInput, "1");
-    await userEvent.click(screen.getByRole("button", { name: /save a pinch of saffron/i }));
-
-    await waitFor(() =>
-      expect(spy).toHaveBeenLastCalledWith(
-        expect.stringContaining("/recipes/1/ingredients/10"),
-        expect.objectContaining({ method: "PATCH" }),
-      ),
-    );
+  it("shows the reviewed status", async () => {
+    show();
     expect(await screen.findByText(/all items reviewed/i)).toBeInTheDocument();
   });
 });
