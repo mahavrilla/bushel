@@ -103,3 +103,18 @@ def consolidate(items: list[tuple[float | None, str | None]]) -> list[dict]:
         {"qty": round(g["qty"], 3) if g["qty"] is not None else None, "unit": g["unit"]}
         for g in groups
     ]
+
+
+def convert_qty(qty: float, from_unit: str | None, to_unit: str | None) -> float | None:
+    """Convert qty from one unit to another. Returns None when units are missing,
+    unparseable by pint, or dimensionally incompatible. Same normalized unit passes through."""
+    fu = _normalize_unit(from_unit)
+    tu = _normalize_unit(to_unit)
+    if fu is None or tu is None:
+        return None
+    if fu == tu:
+        return qty
+    try:
+        return (qty * _ureg(fu)).to(_ureg(tu)).magnitude
+    except Exception:  # noqa: BLE001 — pint raises several types for non-units / bad conversions
+        return None

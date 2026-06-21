@@ -1,4 +1,4 @@
-from app.consolidate.units import consolidate
+from app.consolidate.units import consolidate, convert_qty
 
 
 def _q(items):
@@ -71,3 +71,23 @@ def test_plural_parseable_unit_consolidates():
 def test_duplicate_none_qty_single_entry():
     result = consolidate([(None, "pinch"), (None, "pinch")])
     assert result == [{"qty": None, "unit": "pinch"}]
+
+
+def test_convert_qty_compatible_units():
+    assert convert_qty(2, "lb", "oz") == 32.0
+
+
+def test_convert_qty_same_unit_passthrough():
+    assert convert_qty(5, "bag", "bag") == 5
+
+
+def test_convert_qty_incompatible_returns_none():
+    assert convert_qty(2, "cup", "lb") is None
+
+
+def test_convert_qty_unparseable_unit_returns_none():
+    assert convert_qty(2, "clove", "lb") is None
+
+
+def test_convert_qty_none_unit_returns_none():
+    assert convert_qty(2, None, "lb") is None
