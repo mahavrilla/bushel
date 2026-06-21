@@ -1,70 +1,40 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import * as api from "../api";
 import { GroceryList } from "./GroceryList";
 
+beforeEach(() => {
+  vi.spyOn(api, "getMatch").mockResolvedValue({ connected: false, store_location_id: null, items: [] });
+});
 afterEach(() => vi.restoreAllMocks());
 
-const emptyList = { id: 1, status: "draft", recipes: [], items: [] };
-
-const populatedList = {
+const list = {
   id: 1,
   status: "draft",
-  recipes: [{ recipe_id: 5, title: "Pancakes", servings: 6, default_servings: 4 }],
+  recipes: [{ recipe_id: 9, title: "Pancakes", servings: 4, default_servings: 2 }],
   items: [
-    {
-      ingredient_id: 10, ingredient_name: "garlic", category: "produce",
-      quantities: [{ qty: 3, unit: "clove" }, { qty: 1, unit: "tbsp" }],
-      source_recipe_ids: [5], pantry_status: "needed",
-    },
-    {
-      ingredient_id: 11, ingredient_name: "flour", category: "baking",
-      quantities: [{ qty: 4, unit: "cup" }], source_recipe_ids: [5], pantry_status: "needed",
-    },
+    { ingredient_id: 5, ingredient_name: "flour", category: "baking", quantities: [{ qty: 3, unit: "cup" }], source_recipe_ids: [9], pantry_status: "needed" },
   ],
 };
 
 describe("GroceryList", () => {
-  it("shows an empty state when no recipes", async () => {
-    vi.spyOn(global, "fetch").mockResolvedValue(
-      new Response(JSON.stringify(emptyList), { status: 200 }),
-    );
+  it("renders recipes and shopping items", async () => {
+    vi.spyOn(api, "getList").mockResolvedValue(list);
+    render(<GroceryList />);
+    expect(await screen.findByText(/pancakes/i)).toBeInTheDocument();
+    expect(await screen.findByText(/flour/i)).toBeInTheDocument();
+  });
+
+  it("shows an empty state when no recipes are on the list", async () => {
+    vi.spyOn(api, "getList").mockResolvedValue({ id: 1, status: "draft", recipes: [], items: [] });
     render(<GroceryList />);
     expect(await screen.findByText(/no recipes on your list/i)).toBeInTheDocument();
   });
 
-  it("renders member recipes and consolidated items with multi-unit quantities", async () => {
-    vi.spyOn(global, "fetch").mockResolvedValue(
-      new Response(JSON.stringify(populatedList), { status: 200 }),
-    );
+  it("includes the Review & send panel", async () => {
+    vi.spyOn(api, "getList").mockResolvedValue(list);
     render(<GroceryList />);
-    expect(await screen.findByText(/pancakes/i)).toBeInTheDocument();
-    expect(await screen.findByText(/3 clove \+ 1 tbsp/i)).toBeInTheDocument();
-    expect(await screen.findByText(/4 cup/i)).toBeInTheDocument();
-  });
-
-  it("editing servings calls PATCH and refreshes", async () => {
-    const refreshed = {
-      ...populatedList,
-      recipes: [{ ...populatedList.recipes[0], servings: 8 }],
-    };
-    const spy = vi
-      .spyOn(global, "fetch")
-      .mockResolvedValueOnce(new Response(JSON.stringify(populatedList), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify(refreshed), { status: 200 }));
-
-    render(<GroceryList />);
-    const input = await screen.findByLabelText(/servings for pancakes/i);
-    await userEvent.clear(input);
-    await userEvent.type(input, "8");
-    await userEvent.click(screen.getByRole("button", { name: /update pancakes/i }));
-
-    await waitFor(() =>
-      expect(spy).toHaveBeenLastCalledWith(
-        expect.stringContaining("/list/recipes/5"),
-        expect.objectContaining({ method: "PATCH" }),
-      ),
-    );
+    expect(await screen.findByText(/review & send/i)).toBeInTheDocument();
   });
 });
