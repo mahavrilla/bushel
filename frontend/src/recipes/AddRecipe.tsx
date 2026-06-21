@@ -2,6 +2,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { createRecipe, importRecipe } from "../api";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
+import { ErrorBanner } from "../components/ui/ErrorBanner";
+import { Input } from "../components/ui/Input";
+import { PageHeader } from "../components/ui/PageHeader";
 
 export function AddRecipe() {
   const navigate = useNavigate();
@@ -26,47 +31,44 @@ export function AddRecipe() {
   }
 
   return (
-    <div>
-      <section>
-        <h2>Import by URL</h2>
-        <label>
-          Recipe URL
-          <input value={url} onChange={(e) => setUrl(e.target.value)} />
-        </label>
-        <button disabled={busy || !url} onClick={() => run(() => importRecipe(url))}>
-          {busy ? "Importing…" : "Import"}
-        </button>
-      </section>
+    <div className="flex flex-col gap-4">
+      <PageHeader title="Add recipe" />
+      {error && <ErrorBanner message={error} />}
 
-      <section>
-        <h2>Or enter manually</h2>
-        <label>
-          Title
-          <input value={title} onChange={(e) => setTitle(e.target.value)} />
-        </label>
-        <label>
-          Servings
-          <input
-            type="number"
-            value={servings}
-            onChange={(e) => setServings(Number(e.target.value))}
+      <Card className="flex flex-col gap-3">
+        <h3 className="text-lg font-semibold text-heading">Import by URL</h3>
+        <Input label="Recipe URL" value={url} onChange={(e) => setUrl(e.target.value)} />
+        <Button disabled={!url} loading={busy} className="self-start" onClick={() => run(() => importRecipe(url))}>
+          Import
+        </Button>
+      </Card>
+
+      <Card className="flex flex-col gap-3">
+        <h3 className="text-lg font-semibold text-heading">Or enter manually</h3>
+        <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
+        <Input
+          label="Servings"
+          type="number"
+          value={servings}
+          onChange={(e) => setServings(Number(e.target.value))}
+        />
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-heading">Ingredients (one per line)</span>
+          <textarea
+            className="min-h-24 rounded-xl border border-line bg-surface px-3 py-2 text-ink outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            value={lines}
+            onChange={(e) => setLines(e.target.value)}
           />
         </label>
-        <label>
-          Ingredients (one per line)
-          <textarea value={lines} onChange={(e) => setLines(e.target.value)} />
-        </label>
-        <button
-          disabled={busy || !title.trim() || !lines.trim()}
-          onClick={() =>
-            run(() => createRecipe(title, servings, lines.split("\n")))
-          }
+        <Button
+          disabled={!title.trim() || !lines.trim()}
+          loading={busy}
+          className="self-start"
+          onClick={() => run(() => createRecipe(title, servings, lines.split("\n")))}
         >
-          {busy ? "Saving…" : "Save recipe"}
-        </button>
-      </section>
-
-      {error && <p role="alert">{error}</p>}
+          Save recipe
+        </Button>
+      </Card>
     </div>
   );
 }
