@@ -1,4 +1,4 @@
-import type { GroceryListData, RecipeRead, RecipeSummary } from "./recipes/types";
+import type { ConfirmProductBody, GroceryListData, KrogerLocation, KrogerStatus, MatchData, ProductChoice, RecipeRead, RecipeSummary, SendResult } from "./recipes/types";
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
@@ -87,4 +87,52 @@ export async function updateListServings(
 export async function removeRecipeFromList(recipeId: number): Promise<GroceryListData> {
   const res = await fetch(`${BASE_URL}/list/recipes/${recipeId}`, { method: "DELETE" });
   return json<GroceryListData>(res);
+}
+
+export async function getKrogerStatus(): Promise<KrogerStatus> {
+  return json<KrogerStatus>(await fetch(`${BASE_URL}/kroger/status`));
+}
+
+export async function getKrogerLoginUrl(): Promise<{ url: string }> {
+  return json<{ url: string }>(await fetch(`${BASE_URL}/kroger/login`));
+}
+
+export async function searchLocations(zip: string): Promise<KrogerLocation[]> {
+  return json<KrogerLocation[]>(
+    await fetch(`${BASE_URL}/kroger/locations?zip=${encodeURIComponent(zip)}`),
+  );
+}
+
+export async function getMatch(): Promise<MatchData> {
+  return json<MatchData>(await fetch(`${BASE_URL}/list/match`));
+}
+
+export async function searchItemProducts(
+  itemId: number,
+  q: string,
+): Promise<ProductChoice[]> {
+  return json<ProductChoice[]>(
+    await fetch(`${BASE_URL}/list/items/${itemId}/products?q=${encodeURIComponent(q)}`),
+  );
+}
+
+export async function confirmProduct(
+  itemId: number,
+  body: ConfirmProductBody,
+): Promise<MatchData> {
+  const res = await fetch(`${BASE_URL}/list/items/${itemId}/product`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return json<MatchData>(res);
+}
+
+export async function sendCart(modality: string): Promise<SendResult> {
+  const res = await fetch(`${BASE_URL}/list/send`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ modality }),
+  });
+  return json<SendResult>(res);
 }

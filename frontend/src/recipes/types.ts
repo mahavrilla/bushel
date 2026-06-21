@@ -50,3 +50,57 @@ export interface GroceryListData {
   recipes: ListRecipe[];
   items: ListItem[];
 }
+
+export interface KrogerStatus {
+  connected: boolean;
+  expired: boolean;
+}
+
+export interface KrogerLocation {
+  location_id: string;
+  name: string;
+  address: string;
+}
+
+export interface ProductChoice {
+  upc: string;
+  description: string;
+  size: string | null;
+  price: number | null;
+  stock_level: string | null;
+}
+
+export interface MatchItem {
+  item_id: number;
+  ingredient_id: number;
+  ingredient_name: string | null;
+  total_qty: number | null;
+  total_unit: string | null;
+  purchase_qty: number;
+  purchase_qty_estimated: boolean;
+  kroger_upc: string | null;
+  current: ProductChoice | null;
+}
+
+export interface MatchData {
+  connected: boolean;
+  store_location_id: string | null;
+  items: MatchItem[];
+}
+
+export interface ConfirmProductBody {
+  kroger_upc: string;
+  kroger_description?: string | null;
+  package_size?: string | null;
+}
+
+export interface SendItemResult {
+  upc: string;
+  ok: boolean;
+  error: string | null;
+}
+
+export interface SendResult {
+  status: string;
+  results: SendItemResult[];
+}
