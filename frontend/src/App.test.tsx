@@ -1,6 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import * as api from "./api";
 import { App } from "./App";
 
 describe("App", () => {
@@ -29,5 +30,23 @@ describe("App", () => {
   it("has a Grocery List nav entry", async () => {
     render(<App />);
     expect(await screen.findByRole("button", { name: /grocery list/i })).toBeInTheDocument();
+  });
+
+  it("navigates to the Kroger setup screen", async () => {
+    vi.spyOn(api, "getKrogerStatus").mockResolvedValue({ connected: false, expired: false });
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: /^kroger$/i }));
+    expect(await screen.findByRole("heading", { name: /^kroger$/i })).toBeInTheDocument();
+  });
+
+  it("navigates to the Match & send screen", async () => {
+    vi.spyOn(api, "getMatch").mockResolvedValue({
+      connected: false,
+      store_location_id: null,
+      items: [],
+    });
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: /match & send/i }));
+    expect(await screen.findByRole("heading", { name: /match & send/i })).toBeInTheDocument();
   });
 });
