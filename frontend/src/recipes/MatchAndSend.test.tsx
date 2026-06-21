@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import * as api from "../api";
 import { ApiError } from "../api";
-import { MatchReview } from "./MatchReview";
+import { MatchAndSend } from "./MatchAndSend";
 
 const baseMatch = {
   connected: true,
@@ -25,10 +25,10 @@ const baseMatch = {
 
 afterEach(() => vi.restoreAllMocks());
 
-describe("MatchReview", () => {
+describe("MatchAndSend", () => {
   it("lists items and flags estimated quantities", async () => {
     vi.spyOn(api, "getMatch").mockResolvedValue(baseMatch);
-    render(<MatchReview />);
+    render(<MatchAndSend />);
     expect(await screen.findByText(/flour/)).toBeInTheDocument();
     expect(screen.getByText(/check quantity/i)).toBeInTheDocument();
   });
@@ -38,7 +38,7 @@ describe("MatchReview", () => {
     const search = vi.spyOn(api, "searchItemProducts").mockResolvedValue([
       { upc: "0001", description: "AP Flour", size: "5 lb", price: 3.49, stock_level: "HIGH" },
     ]);
-    render(<MatchReview />);
+    render(<MatchAndSend />);
     fireEvent.click(await screen.findByRole("button", { name: /find product/i }));
     await waitFor(() => expect(search).toHaveBeenCalledWith(1, "flour"));
     expect(await screen.findByText(/AP Flour/)).toBeInTheDocument();
@@ -50,7 +50,7 @@ describe("MatchReview", () => {
       status: "sent_to_kroger",
       results: [{ upc: "0001", ok: true, error: null }],
     });
-    render(<MatchReview />);
+    render(<MatchAndSend />);
     fireEvent.click(await screen.findByRole("button", { name: /send to kroger cart/i }));
     await waitFor(() => expect(send).toHaveBeenCalledWith("PICKUP"));
     expect(await screen.findByText(/sent_to_kroger/)).toBeInTheDocument();
@@ -59,7 +59,7 @@ describe("MatchReview", () => {
   it("prompts to reconnect when send returns reauth_required (409)", async () => {
     vi.spyOn(api, "getMatch").mockResolvedValue(baseMatch);
     vi.spyOn(api, "sendCart").mockRejectedValue(new ApiError(409));
-    render(<MatchReview />);
+    render(<MatchAndSend />);
     fireEvent.click(await screen.findByRole("button", { name: /send to kroger cart/i }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/reconnect/i);
   });
