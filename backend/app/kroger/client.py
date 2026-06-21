@@ -117,6 +117,17 @@ class KrogerClient:
             )
         return out
 
+    # --- cart ----------------------------------------------------------------
+    def add_to_cart(self, token: str, *, upc: str, quantity: int, modality: str) -> None:
+        """PUT a single item to the customer's cart. Raises on any non-2xx. One item per
+        call so callers get truthful per-item success/failure (cart is write-only)."""
+        resp = self._http.put(
+            "/v1/cart/add",
+            json={"items": [{"upc": upc, "quantity": quantity, "modality": modality}]},
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+        )
+        self._raise_for_status(resp)
+
     def search_products(
         self, token: str, term: str, location_id: str, limit: int = 10
     ) -> list[Product]:
