@@ -8,8 +8,16 @@ export async function getHealth(): Promise<{ status: string }> {
   return res.json();
 }
 
+export class ApiError extends Error {
+  status: number;
+  constructor(status: number) {
+    super(`Request failed: ${status}`);
+    this.status = status;
+  }
+}
+
 async function json<T>(res: Response): Promise<T> {
-  if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+  if (!res.ok) throw new ApiError(res.status);
   return res.json() as Promise<T>;
 }
 

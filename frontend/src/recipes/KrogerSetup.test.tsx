@@ -1,9 +1,17 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as api from "../api";
 import { KrogerSetup } from "./KrogerSetup";
 
+beforeEach(() => {
+  // Default: no store chosen yet. Individual tests override as needed.
+  vi.spyOn(api, "getMatch").mockResolvedValue({
+    connected: false,
+    store_location_id: null,
+    items: [],
+  });
+});
 afterEach(() => vi.restoreAllMocks());
 
 describe("KrogerSetup", () => {
@@ -39,5 +47,16 @@ describe("KrogerSetup", () => {
     fireEvent.click(await screen.findByRole("button", { name: /use this store/i }));
     await waitFor(() => expect(set).toHaveBeenCalledWith("L1"));
     expect(await screen.findByText(/Selected store: L1/)).toBeInTheDocument();
+  });
+
+  it("hydrates the already-selected store on mount", async () => {
+    vi.spyOn(api, "getKrogerStatus").mockResolvedValue({ connected: true, expired: false });
+    vi.spyOn(api, "getMatch").mockResolvedValue({
+      connected: true,
+      store_location_id: "L7",
+      items: [],
+    });
+    render(<KrogerSetup />);
+    expect(await screen.findByText(/Selected store: L7/)).toBeInTheDocument();
   });
 });

@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import * as api from "../api";
+import { ApiError } from "../api";
 import { MatchReview } from "./MatchReview";
 
 const baseMatch = {
@@ -53,5 +54,13 @@ describe("MatchReview", () => {
     fireEvent.click(await screen.findByRole("button", { name: /send to kroger cart/i }));
     await waitFor(() => expect(send).toHaveBeenCalledWith("PICKUP"));
     expect(await screen.findByText(/sent_to_kroger/)).toBeInTheDocument();
+  });
+
+  it("prompts to reconnect when send returns reauth_required (409)", async () => {
+    vi.spyOn(api, "getMatch").mockResolvedValue(baseMatch);
+    vi.spyOn(api, "sendCart").mockRejectedValue(new ApiError(409));
+    render(<MatchReview />);
+    fireEvent.click(await screen.findByRole("button", { name: /send to kroger cart/i }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/reconnect/i);
   });
 });

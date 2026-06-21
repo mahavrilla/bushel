@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { confirmProduct, getMatch, searchItemProducts, sendCart } from "../api";
+import { ApiError, confirmProduct, getMatch, searchItemProducts, sendCart } from "../api";
 import type { MatchData, ProductChoice, SendResult } from "./types";
 
 export function MatchReview() {
@@ -8,29 +8,54 @@ export function MatchReview() {
   const [choices, setChoices] = useState<Record<number, ProductChoice[]>>({});
   const [modality, setModality] = useState("PICKUP");
   const [sendResult, setSendResult] = useState<SendResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     getMatch().then(setMatch).catch(() => setMatch(null));
   }, []);
 
+  function report(err: unknown) {
+    // A 409 from the matching API means the Kroger session needs re-auth.
+    if (err instanceof ApiError && err.status === 409) {
+      setError("Your Kroger session expired — reconnect on the Kroger tab, then try again.");
+    } else {
+      setError("Something went wrong talking to Kroger. Please try again.");
+    }
+  }
+
   async function find(itemId: number, name: string | null) {
-    const results = await searchItemProducts(itemId, name ?? "");
-    setChoices((c) => ({ ...c, [itemId]: results }));
+    setError(null);
+    try {
+      const results = await searchItemProducts(itemId, name ?? "");
+      setChoices((c) => ({ ...c, [itemId]: results }));
+    } catch (err) {
+      report(err);
+    }
   }
 
   async function pick(itemId: number, p: ProductChoice) {
-    setMatch(
-      await confirmProduct(itemId, {
-        kroger_upc: p.upc,
-        kroger_description: p.description,
-        package_size: p.size,
-      }),
-    );
+    setError(null);
+    try {
+      setMatch(
+        await confirmProduct(itemId, {
+          kroger_upc: p.upc,
+          kroger_description: p.description,
+          package_size: p.size,
+        }),
+      );
+    } catch (err) {
+      report(err);
+    }
   }
 
   async function send() {
-    setSendResult(await sendCart(modality));
-    setMatch(await getMatch());
+    setError(null);
+    try {
+      setSendResult(await sendCart(modality));
+      setMatch(await getMatch());
+    } catch (err) {
+      report(err);
+    }
   }
 
   if (!match) return <p>Loading…</p>;
@@ -38,6 +63,7 @@ export function MatchReview() {
   return (
     <section>
       <h2>Match &amp; send</h2>
+      {error && <p role="alert">{error}</p>}
       {!match.connected && <p>Connect your Kroger account first.</p>}
       {!match.store_location_id && <p>Pick a home store first.</p>}
 

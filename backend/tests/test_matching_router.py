@@ -89,3 +89,15 @@ def test_set_store_endpoint(db_session):
     assert resp.status_code == 200
     assert resp.json()["store_location_id"] == "L42"
     app.dependency_overrides.clear()
+
+
+def test_search_products_auth_error_is_502(db_session):
+    from app.kroger.client import KrogerAuthError
+
+    gl, ing, it = _seed(db_session)
+    kroger = MagicMock()
+    kroger.fetch_client_token.side_effect = KrogerAuthError("bad client credentials")
+    client = _client(db_session, kroger)
+    resp = client.get(f"/list/items/{it.id}/products", params={"q": "flour"})
+    assert resp.status_code == 502
+    app.dependency_overrides.clear()

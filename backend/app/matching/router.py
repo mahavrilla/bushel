@@ -49,6 +49,10 @@ def search_products(
         raise HTTPException(status_code=404, detail=str(exc))
     except service.NoStoreSelectedError as exc:
         raise HTTPException(status_code=409, detail={"error": "no_store", "message": str(exc)})
+    except KrogerAuthError as exc:
+        # Product search uses app credentials, not the user session — a 401 here means
+        # misconfigured client id/secret, not an expired login. 502, like /auth/callback.
+        raise HTTPException(status_code=502, detail=f"Kroger auth failed: {exc}")
     except KrogerError as exc:
         raise HTTPException(status_code=503, detail=f"Kroger unavailable: {exc}")
 

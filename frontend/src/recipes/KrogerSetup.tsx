@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { getKrogerLoginUrl, getKrogerStatus, searchLocations, setStore } from "../api";
+import { getKrogerLoginUrl, getKrogerStatus, getMatch, searchLocations, setStore } from "../api";
 import type { KrogerLocation, KrogerStatus } from "./types";
 
 export function KrogerSetup() {
@@ -11,6 +11,8 @@ export function KrogerSetup() {
 
   useEffect(() => {
     getKrogerStatus().then(setStatus).catch(() => setStatus(null));
+    // Show the already-chosen store (persisted on the draft) when returning to this screen.
+    getMatch().then((m) => setSelected(m.store_location_id)).catch(() => {});
   }, []);
 
   async function connect() {

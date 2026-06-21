@@ -59,7 +59,8 @@ def callback(
     auth.save_tokens(db, token)
     db.commit()
     # Send the user back to the web app (functional; Phase 6 polishes this).
-    return RedirectResponse(url=get_settings().cors_origins[0], status_code=307)
+    origins = get_settings().cors_origins
+    return RedirectResponse(url=origins[0] if origins else "/", status_code=307)
 
 
 @router.get("/kroger/locations", response_model=list[Location])
