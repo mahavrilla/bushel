@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.consolidate.router import router as list_router
+from app.kroger.router import router as kroger_router
 from app.recipes.router import router as recipes_router
 
 app = FastAPI(title="Bushel API")
@@ -22,3 +23,4 @@ def health() -> dict[str, str]:
 
 app.include_router(recipes_router)
 app.include_router(list_router)
+app.include_router(kroger_router)
