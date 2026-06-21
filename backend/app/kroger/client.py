@@ -12,7 +12,7 @@ from urllib.parse import urlencode
 import httpx
 
 from app.config import get_settings
-from app.kroger.schemas import TokenResp
+from app.kroger.schemas import Location, Product, TokenResp
 
 PROD_BASE = "https://api.kroger.com"
 _SCOPES = "product.compact cart.basic:write profile.compact"
@@ -95,3 +95,50 @@ class KrogerClient:
 
     def refresh(self, refresh_token: str) -> TokenResp:
         return self._token_request({"grant_type": "refresh_token", "refresh_token": refresh_token})
+
+    # --- catalog -------------------------------------------------------------
+    def search_locations(self, token: str, zip_code: str, limit: int = 10) -> list[Location]:
+        resp = self._http.get(
+            "/v1/locations",
+            params={"filter.zipCode.near": zip_code, "filter.limit": limit},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self._raise_for_status(resp)
+        out: list[Location] = []
+        for row in resp.json().get("data", []):
+            addr = row.get("address", {})
+            parts = [addr.get("addressLine1"), addr.get("city"), addr.get("state"), addr.get("zipCode")]
+            out.append(
+                Location(
+                    location_id=row["locationId"],
+                    name=row.get("name", ""),
+                    address=", ".join(p for p in parts if p),
+                )
+            )
+        return out
+
+    def search_products(
+        self, token: str, term: str, location_id: str, limit: int = 10
+    ) -> list[Product]:
+        resp = self._http.get(
+            "/v1/products",
+            params={"filter.term": term, "filter.locationId": location_id, "filter.limit": limit},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self._raise_for_status(resp)
+        out: list[Product] = []
+        for row in resp.json().get("data", []):
+            items = row.get("items") or []
+            first = items[0] if items else {}
+            price = (first.get("price") or {}).get("regular")
+            stock = (first.get("inventory") or {}).get("stockLevel")
+            out.append(
+                Product(
+                    upc=row["upc"],
+                    description=row.get("description", ""),
+                    size=first.get("size"),
+                    price=price,
+                    stock_level=stock,
+                )
+            )
+        return out
