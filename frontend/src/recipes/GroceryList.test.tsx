@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as api from "../api";
@@ -36,5 +37,16 @@ describe("GroceryList", () => {
     vi.spyOn(api, "getList").mockResolvedValue(list);
     render(<GroceryList />);
     expect(await screen.findByText(/review & send/i)).toBeInTheDocument();
+  });
+
+  it("updates a recipe's servings via updateListServings", async () => {
+    vi.spyOn(api, "getList").mockResolvedValue(list);
+    const update = vi.spyOn(api, "updateListServings").mockResolvedValue(list);
+    render(<GroceryList />);
+    const input = await screen.findByLabelText(/servings for pancakes/i);
+    await userEvent.clear(input);
+    await userEvent.type(input, "6");
+    await userEvent.click(screen.getByRole("button", { name: /update pancakes/i }));
+    await waitFor(() => expect(update).toHaveBeenCalledWith(9, 6));
   });
 });

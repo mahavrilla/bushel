@@ -1,6 +1,8 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import * as api from "../api";
 import { renderWithRouter } from "../test/renderWithRouter";
 import { RecipeDetail } from "./RecipeDetail";
 
@@ -30,5 +32,22 @@ describe("RecipeDetail", () => {
   it("shows the reviewed status", async () => {
     show();
     expect(await screen.findByText(/all items reviewed/i)).toBeInTheDocument();
+  });
+
+  it("shows the count of items needing review", async () => {
+    vi.spyOn(api, "getRecipe").mockResolvedValue({
+      ...recipe,
+      ingredients: [{ ...recipe.ingredients[0], needs_review: true }],
+    });
+    renderWithRouter(<RecipeDetail />, { path: "/recipes/:id", initialEntries: ["/recipes/1"] });
+    expect(await screen.findByText(/1 item needs review/i)).toBeInTheDocument();
+  });
+
+  it("saves an edited ingredient via updateIngredient", async () => {
+    vi.spyOn(api, "getRecipe").mockResolvedValue(recipe);
+    const update = vi.spyOn(api, "updateIngredient").mockResolvedValue(recipe);
+    renderWithRouter(<RecipeDetail />, { path: "/recipes/:id", initialEntries: ["/recipes/1"] });
+    await userEvent.click(await screen.findByRole("button", { name: /save 2 cups flour/i }));
+    await waitFor(() => expect(update).toHaveBeenCalledWith(1, 10, { qty: 2, unit: "cup" }));
   });
 });

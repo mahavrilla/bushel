@@ -14,4 +14,11 @@ describe("AppShell", () => {
     expect(list).toHaveAttribute("href", "/list");
     expect(kroger).toHaveAttribute("href", "/kroger");
   });
+
+  it("marks the current destination active", () => {
+    renderWithRouter(<AppShell />, { path: "*", initialEntries: ["/list"] });
+    // NavLink sets aria-current="page" on the active link.
+    expect(screen.getAllByRole("link", { name: /^list$/i })[0]).toHaveAttribute("aria-current", "page");
+    expect(screen.getAllByRole("link", { name: /recipes/i })[0]).not.toHaveAttribute("aria-current");
+  });
 });

@@ -30,6 +30,16 @@ describe("AddRecipe", () => {
     expect(await screen.findByText(/detail screen/i)).toBeInTheDocument();
   });
 
+  it("navigates to the new recipe after a successful URL import", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ id: 12, title: "Imported", servings: 2, source_url: "http://x", ingredients: [] }), { status: 200 }),
+    );
+    renderAddRecipe();
+    await userEvent.type(screen.getByLabelText(/recipe url/i), "http://x");
+    await userEvent.click(screen.getByRole("button", { name: /^import$/i }));
+    expect(await screen.findByText(/detail screen/i)).toBeInTheDocument();
+  });
+
   it("shows an error when import fails", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue(new Response("nope", { status: 500 }));
     renderAddRecipe();
