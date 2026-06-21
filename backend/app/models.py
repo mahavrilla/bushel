@@ -86,6 +86,7 @@ class GroceryListItem(Base):
     total_qty: Mapped[float | None] = mapped_column(Float, nullable=True)
     total_unit: Mapped[str | None] = mapped_column(String(50), nullable=True)
     purchase_qty: Mapped[int] = mapped_column(Integer, default=1)
+    purchase_qty_estimated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     kroger_upc: Mapped[str | None] = mapped_column(String(50), nullable=True)
     source_recipe_ids: Mapped[list[int]] = mapped_column(ARRAY(Integer), default=list)
     quantities: Mapped[list] = mapped_column(JSONB, default=list, server_default="[]")
