@@ -3,20 +3,24 @@ and of grocery_list_items.kroger_upc / purchase_qty / purchase_qty_estimated."""
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.consolidate.service import get_or_create_draft
 from app.kroger import auth as kroger_auth
-from app.kroger.client import KrogerClient
+from app.kroger.client import KrogerAuthError, KrogerClient, KrogerError
 from app.matching.purchase import compute_purchase_qty
 from app.matching.schemas import (
+    ConfirmRequest,
     MatchItemRead,
     MatchRead,
     ProductChoice,
-    ConfirmRequest,
+    SendItemResult,
+    SendResult,
 )
-from app.models import GroceryList, GroceryListItem, Ingredient, IngredientProductMap
+from app.models import GroceryList, GroceryListItem, Ingredient, IngredientProductMap, PurchaseLog
 
 
 class ItemNotFoundError(Exception):
@@ -122,3 +126,42 @@ def search_item_products(
         )
         for p in products
     ]
+
+
+def send_to_cart(db: Session, client: KrogerClient, modality: str = "PICKUP") -> SendResult:
+    """Push each item with a UPC to the cart, one PUT per item. Logs only successes to
+    purchase_log. Raises NotConnectedError/KrogerAuthError if the token is unusable."""
+    draft = get_or_create_draft(db)
+    token = kroger_auth.get_valid_token(db, client)  # NotConnected/Auth errors propagate
+
+    results: list[SendItemResult] = []
+    any_success = False
+    for item in _kept_items(db, draft.id):
+        if item.kroger_upc is None:
+            continue
+        try:
+            client.add_to_cart(
+                token, upc=item.kroger_upc, quantity=item.purchase_qty, modality=modality
+            )
+        except KrogerAuthError:
+            raise  # token died mid-send: abort so the user re-auths, no partial lie
+        except KrogerError as exc:
+            results.append(SendItemResult(upc=item.kroger_upc, ok=False, error=str(exc)))
+            continue
+        any_success = True
+        db.add(
+            PurchaseLog(
+                ingredient_id=item.ingredient_id,
+                kroger_upc=item.kroger_upc,
+                qty=item.total_qty,
+                unit=item.total_unit,
+                source_list_id=draft.id,
+            )
+        )
+        results.append(SendItemResult(upc=item.kroger_upc, ok=True, error=None))
+
+    if any_success:
+        draft.status = "sent_to_kroger"
+        draft.sent_at = datetime.now(timezone.utc)
+    db.flush()
+    return SendResult(status=draft.status, results=results)
