@@ -90,6 +90,9 @@ def test_send_auth_failure_aborts_with_error(db_session):
     kroger.add_to_cart.side_effect = KrogerAuthError("token revoked")
     with pytest.raises(KrogerAuthError):
         service.send_to_cart(db_session, kroger, modality="PICKUP")
+    # The whole send aborts — nothing is logged as purchased.
+    assert db_session.query(PurchaseLog).count() == 0
+    assert gl.status == "draft"
 
 
 def test_send_not_connected_raises(db_session):

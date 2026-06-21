@@ -42,7 +42,9 @@ def _current_choice(db: Session, item: GroceryListItem) -> ProductChoice | None:
     if item.kroger_upc is None:
         return None
     mapping = db.execute(
-        select(IngredientProductMap).where(IngredientProductMap.kroger_upc == item.kroger_upc)
+        select(IngredientProductMap).where(
+            IngredientProductMap.ingredient_id == item.ingredient_id
+        )
     ).scalars().first()
     if mapping is None:
         return ProductChoice(upc=item.kroger_upc, description="")

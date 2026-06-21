@@ -44,6 +44,19 @@ def test_get_match_state_skips_skipped_items(db_session):
     assert service.get_match_state(db_session).items == []
 
 
+def test_get_match_state_current_from_mapping_by_ingredient(db_session):
+    gl, ing, item = _draft_with_item(db_session)
+    item.kroger_upc = "0001"
+    db_session.add(IngredientProductMap(ingredient_id=ing.id, kroger_upc="0001",
+                                        kroger_description="AP Flour", package_size="5 lb"))
+    db_session.flush()
+    current = service.get_match_state(db_session).items[0].current
+    assert current is not None
+    assert current.upc == "0001"
+    assert current.description == "AP Flour"
+    assert current.size == "5 lb"
+
+
 def test_confirm_product_persists_map_and_recomputes_qty(db_session):
     gl, ing, item = _draft_with_item(db_session, total_qty=3.0, total_unit="lb")
     service.confirm_product(
