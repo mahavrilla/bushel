@@ -115,3 +115,12 @@ def test_search_item_products_no_store_raises(db_session):
     gl, ing, item = _draft_with_item(db_session, store=None)
     with pytest.raises(service.NoStoreSelectedError):
         service.search_item_products(db_session, MagicMock(), item.id, query=None)
+
+
+def test_set_store_persists_on_draft(db_session):
+    gl, ing, item = _draft_with_item(db_session, store=None)
+    state = service.set_store(db_session, "L99")
+    assert state.store_location_id == "L99"
+    db_session.flush()
+    from app.models import GroceryList
+    assert db_session.get(GroceryList, gl.id).store_location_id == "L99"

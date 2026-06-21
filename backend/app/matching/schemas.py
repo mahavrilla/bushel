@@ -31,6 +31,10 @@ class MatchRead(BaseModel):
     items: list[MatchItemRead]
 
 
+class SetStoreRequest(BaseModel):
+    location_id: str
+
+
 class ConfirmRequest(BaseModel):
     kroger_upc: str
     kroger_description: str | None = None

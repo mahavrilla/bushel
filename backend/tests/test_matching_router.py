@@ -80,3 +80,12 @@ def test_send_endpoint_success(db_session):
     assert resp.status_code == 200
     assert resp.json()["status"] == "sent_to_kroger"
     app.dependency_overrides.clear()
+
+
+def test_set_store_endpoint(db_session):
+    _seed(db_session, store=None)
+    client = _client(db_session)
+    resp = client.post("/list/store", json={"location_id": "L42"})
+    assert resp.status_code == 200
+    assert resp.json()["store_location_id"] == "L42"
+    app.dependency_overrides.clear()

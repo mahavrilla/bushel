@@ -16,6 +16,7 @@ from app.matching.schemas import (
     ProductChoice,
     SendRequest,
     SendResult,
+    SetStoreRequest,
 )
 
 router = APIRouter(prefix="/list", tags=["matching"])
@@ -24,6 +25,13 @@ router = APIRouter(prefix="/list", tags=["matching"])
 @router.get("/match", response_model=MatchRead)
 def get_match(db: Session = Depends(get_db)):
     state = service.get_match_state(db)
+    db.commit()
+    return state
+
+
+@router.post("/store", response_model=MatchRead)
+def set_store(body: SetStoreRequest, db: Session = Depends(get_db)):
+    state = service.set_store(db, body.location_id)
     db.commit()
     return state
 

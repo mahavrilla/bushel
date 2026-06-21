@@ -79,6 +79,14 @@ def get_match_state(db: Session) -> MatchRead:
     )
 
 
+def set_store(db: Session, location_id: str) -> MatchRead:
+    """Persist the chosen Kroger store on the active draft, then return refreshed match state."""
+    draft = get_or_create_draft(db)
+    draft.store_location_id = location_id
+    db.flush()
+    return get_match_state(db)
+
+
 def _get_item(db: Session, item_id: int) -> GroceryListItem:
     item = db.get(GroceryListItem, item_id)
     if item is None:
