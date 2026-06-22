@@ -39,9 +39,10 @@ export function MatchAndSend() {
           package_size: product.size,
         }),
       );
-      setOpenItem(null);
     } catch (err) {
       report(err);
+    } finally {
+      setOpenItem(null);
     }
   }
 
@@ -125,6 +126,7 @@ export function MatchAndSend() {
 
       {openItem && (
         <ProductPickerModal
+          key={openItem.item_id}
           itemId={openItem.item_id}
           ingredientName={openItem.ingredient_name}
           onChoose={pick}
