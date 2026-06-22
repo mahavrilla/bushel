@@ -15,8 +15,10 @@ from app.models import (
     GroceryList,
     GroceryListItem,
     GroceryListRecipe,
+    GroceryListStaple,
     Recipe,
     RecipeIngredient,
+    Staple,
 )
 
 
@@ -76,6 +78,17 @@ def _recompute(db: Session, draft: GroceryList) -> None:
             grouped[row.ingredient_id]["quantities"].append((scaled, row.unit))
             grouped[row.ingredient_id]["recipes"].add(m.recipe_id)
 
+    # Fold in this draft's saved staples as "as needed" quantities (qty None).
+    staple_links = db.execute(
+        select(GroceryListStaple).where(GroceryListStaple.list_id == draft.id)
+    ).scalars().all()
+    if staple_links:
+        staple_by_id = {s.id: s for s in db.execute(select(Staple)).scalars().all()}
+        for link in staple_links:
+            staple = staple_by_id.get(link.staple_id)
+            if staple is not None:
+                grouped[staple.ingredient_id]["quantities"].append((None, None))
+
     for ingredient_id, data in grouped.items():
         quantities = consolidate(data["quantities"])
         single = quantities[0] if len(quantities) == 1 else None
@@ -93,6 +106,13 @@ def _recompute(db: Session, draft: GroceryList) -> None:
             )
         )
     db.flush()
+
+
+def recompute_draft(db: Session) -> GroceryList:
+    """Public entry point to rebuild the active draft's items (used by staples)."""
+    draft = get_or_create_draft(db)
+    _recompute(db, draft)
+    return draft
 
 
 def add_recipe(db: Session, recipe_id: int, servings: int | None = None) -> GroceryList:
