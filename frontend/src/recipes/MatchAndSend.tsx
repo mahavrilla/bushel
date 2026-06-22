@@ -112,7 +112,7 @@ export function MatchAndSend() {
       </div>
 
       {sendResult && (
-        <div className="rounded-xl bg-cream p-3">
+        <div className="rounded-xl bg-canvas p-3">
           <p className="text-sm font-medium text-heading">Status: {sendResult.status}</p>
           <ul className="mt-1 flex flex-col gap-1">
             {sendResult.results.map((r) => (

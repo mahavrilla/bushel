@@ -61,7 +61,7 @@ function Row({
   }
 
   return (
-    <Card className={ingredient.needs_review ? "border-accent bg-tint-amber" : ""}>
+    <Card className={ingredient.needs_review ? "border-warning/40 bg-warning-tint" : ""}>
       {error && <ErrorBanner message={error} />}
       <div className="mb-2 flex items-center gap-2">
         <span className="font-medium text-heading">{ingredient.raw_text}</span>
