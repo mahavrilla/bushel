@@ -18,7 +18,12 @@ from app.recipes.schemas import (
     RecipeRead,
     RecipeSummary,
 )
-from app.recipes.service import (RecipeNotFoundError, create_from_manual, delete_recipe, import_from_url)
+from app.recipes.service import (
+    RecipeNotFoundError,
+    create_from_manual,
+    delete_recipe,
+    import_from_url,
+)
 
 router = APIRouter(prefix="/recipes", tags=["recipes"])
 
