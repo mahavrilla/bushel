@@ -1,4 +1,4 @@
-from app.consolidate.units import consolidate, convert_qty
+from app.consolidate.units import consolidate, convert_qty, normalize_unit
 
 
 def _q(items):
@@ -91,3 +91,17 @@ def test_convert_qty_unparseable_unit_returns_none():
 
 def test_convert_qty_none_unit_returns_none():
     assert convert_qty(2, None, "lb") is None
+
+
+def test_normalize_unit_aliases_and_singularizes():
+    assert normalize_unit("tbsp") == "tablespoon"
+    assert normalize_unit("Tbsp") == "tablespoon"
+    assert normalize_unit("tsp") == "teaspoon"
+    assert normalize_unit("cups") == "cup"
+    assert normalize_unit("cloves") == "clove"
+
+
+def test_normalize_unit_passthrough_and_none():
+    assert normalize_unit("pinch") == "pinch"
+    assert normalize_unit(None) is None
+    assert normalize_unit("   ") is None
