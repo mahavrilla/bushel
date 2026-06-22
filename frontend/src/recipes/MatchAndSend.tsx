@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
 
-import { ApiError, confirmProduct, getMatch, searchItemProducts, sendCart } from "../api";
+import { ApiError, confirmProduct, getMatch, sendCart } from "../api";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { ErrorBanner } from "../components/ui/ErrorBanner";
 import { Pill } from "../components/ui/Pill";
 import { Spinner } from "../components/ui/Spinner";
-import type { MatchData, ProductChoice, SendResult } from "./types";
+import { ProductPickerModal } from "./ProductPickerModal";
+import type { MatchData, MatchItem, ProductChoice, SendResult } from "./types";
 
 export function MatchAndSend() {
   const [match, setMatch] = useState<MatchData | null>(null);
-  const [choices, setChoices] = useState<Record<number, ProductChoice[]>>({});
+  const [openItem, setOpenItem] = useState<MatchItem | null>(null);
   const [modality, setModality] = useState("PICKUP");
   const [sendResult, setSendResult] = useState<SendResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -27,26 +28,18 @@ export function MatchAndSend() {
     }
   }
 
-  async function find(itemId: number, name: string | null) {
-    setError(null);
-    try {
-      const results = await searchItemProducts(itemId, name ?? "");
-      setChoices((c) => ({ ...c, [itemId]: results }));
-    } catch (err) {
-      report(err);
-    }
-  }
-
-  async function pick(itemId: number, p: ProductChoice) {
+  async function pick(product: ProductChoice) {
+    if (openItem === null) return;
     setError(null);
     try {
       setMatch(
-        await confirmProduct(itemId, {
-          kroger_upc: p.upc,
-          kroger_description: p.description,
-          package_size: p.size,
+        await confirmProduct(openItem.item_id, {
+          kroger_upc: product.upc,
+          kroger_description: product.description,
+          package_size: product.size,
         }),
       );
+      setOpenItem(null);
     } catch (err) {
       report(err);
     }
@@ -92,23 +85,10 @@ export function MatchAndSend() {
                   ? `Product: ${it.current.description}${it.current.size ? ` (${it.current.size})` : ""}`
                   : "No product chosen yet"}
               </span>
-              <Button variant="secondary" className="ml-auto" onClick={() => find(it.item_id, it.ingredient_name)}>
+              <Button variant="secondary" className="ml-auto" onClick={() => setOpenItem(it)}>
                 {it.current ? "Change" : "Find product"}
               </Button>
             </div>
-            <ul className="mt-2 flex flex-col gap-1">
-              {(choices[it.item_id] ?? []).map((p) => (
-                <li key={p.upc} className="flex items-center gap-2 text-sm">
-                  <span>{p.description}</span>
-                  {p.size && <span className="text-muted">({p.size})</span>}
-                  {p.price != null && <span className="text-muted">${p.price.toFixed(2)}</span>}
-                  {p.stock_level === "TEMPORARILY_OUT_OF_STOCK" && <Pill tone="danger">Out of stock</Pill>}
-                  <Button variant="link" className="ml-auto" onClick={() => pick(it.item_id, p)}>
-                    Choose
-                  </Button>
-                </li>
-              ))}
-            </ul>
           </li>
         ))}
       </ul>
@@ -141,6 +121,15 @@ export function MatchAndSend() {
             ))}
           </ul>
         </div>
+      )}
+
+      {openItem && (
+        <ProductPickerModal
+          itemId={openItem.item_id}
+          ingredientName={openItem.ingredient_name}
+          onChoose={pick}
+          onClose={() => setOpenItem(null)}
+        />
       )}
     </Card>
   );
