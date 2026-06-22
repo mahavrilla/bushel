@@ -21,6 +21,7 @@ from app.recipes.schemas import (
     RecipeRead,
     RecipeSummary,
 )
+from app.consolidate.units import normalize_unit
 from app.recipes.service import (
     RecipeNotFoundError,
     add_ingredient,
@@ -158,7 +159,7 @@ def update_ingredient(
     if body.qty is not None:
         row.qty = body.qty
     if body.unit is not None:
-        row.unit = body.unit
+        row.unit = normalize_unit(body.unit)
     if body.ingredient_id is not None:
         row.ingredient_id = body.ingredient_id
     row.needs_review = False
