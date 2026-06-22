@@ -1,8 +1,9 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
+import * as api from "../api";
 import { AddRecipe } from "./AddRecipe";
 
 afterEach(() => vi.restoreAllMocks());
@@ -45,6 +46,24 @@ describe("AddRecipe", () => {
     renderAddRecipe();
     await userEvent.type(screen.getByLabelText(/recipe url/i), "http://x");
     await userEvent.click(screen.getByRole("button", { name: /^import$/i }));
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+  });
+
+  it("extracts ingredients into the textarea", async () => {
+    const spy = vi.spyOn(api, "extractIngredients").mockResolvedValue(["ground turkey", "olive oil"]);
+    renderAddRecipe();
+    const textarea = screen.getByLabelText(/ingredients/i);
+    await userEvent.type(textarea, "messy recipe block");
+    await userEvent.click(screen.getByRole("button", { name: /extract ingredients/i }));
+    await waitFor(() => expect(spy).toHaveBeenCalledWith("messy recipe block"));
+    expect(textarea).toHaveValue("ground turkey\nolive oil");
+  });
+
+  it("shows an error when extraction fails", async () => {
+    vi.spyOn(api, "extractIngredients").mockRejectedValue(new Error("boom"));
+    renderAddRecipe();
+    await userEvent.type(screen.getByLabelText(/ingredients/i), "block");
+    await userEvent.click(screen.getByRole("button", { name: /extract ingredients/i }));
     expect(await screen.findByRole("alert")).toBeInTheDocument();
   });
 });
