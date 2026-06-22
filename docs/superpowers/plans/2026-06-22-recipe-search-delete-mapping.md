@@ -15,7 +15,7 @@
 **Backend tests** run against the isolated test Postgres on port 5544 (NOT the dev DB on 5432 — the suite's `conftest.py` drops all tables on teardown). Always run backend tests like this:
 
 ```bash
-cd backend && DATABASE_URL=postgresql+psycopg://bushel:bushel@localhost:5544/bushel uv run pytest <args>
+cd backend && DATABASE_URL=postgresql+psycopg://bushel:bushel@localhost:5544/bushel_test uv run pytest <args>
 ```
 
 **Frontend tests** run with:
@@ -100,7 +100,7 @@ def test_delete_recipe_on_list_recomputes_draft(db_session):
 - [ ] **Step 2: Run the tests to verify they fail**
 
 ```bash
-cd backend && DATABASE_URL=postgresql+psycopg://bushel:bushel@localhost:5544/bushel uv run pytest tests/test_recipes_router.py -k delete -v
+cd backend && DATABASE_URL=postgresql+psycopg://bushel:bushel@localhost:5544/bushel_test uv run pytest tests/test_recipes_router.py -k delete -v
 ```
 Expected: FAIL — the DELETE route returns 405/404 and the recompute assertion fails.
 
@@ -174,7 +174,7 @@ def delete_recipe_endpoint(recipe_id: int, db: Session = Depends(get_db)):
 - [ ] **Step 5: Run the tests to verify they pass**
 
 ```bash
-cd backend && DATABASE_URL=postgresql+psycopg://bushel:bushel@localhost:5544/bushel uv run pytest tests/test_recipes_router.py -v
+cd backend && DATABASE_URL=postgresql+psycopg://bushel:bushel@localhost:5544/bushel_test uv run pytest tests/test_recipes_router.py -v
 ```
 Expected: PASS (all recipe-router tests, including the three new ones).
 
@@ -262,7 +262,7 @@ def test_create_is_idempotent_on_normalized_name(db_session):
 - [ ] **Step 2: Run the tests to verify they fail**
 
 ```bash
-cd backend && DATABASE_URL=postgresql+psycopg://bushel:bushel@localhost:5544/bushel uv run pytest tests/test_ingredients_router.py -v
+cd backend && DATABASE_URL=postgresql+psycopg://bushel:bushel@localhost:5544/bushel_test uv run pytest tests/test_ingredients_router.py -v
 ```
 Expected: FAIL — no `/ingredients` routes are registered (404).
 
@@ -352,7 +352,7 @@ app.include_router(ingredients_router)
 - [ ] **Step 6: Run the tests to verify they pass**
 
 ```bash
-cd backend && DATABASE_URL=postgresql+psycopg://bushel:bushel@localhost:5544/bushel uv run pytest tests/test_ingredients_router.py -v
+cd backend && DATABASE_URL=postgresql+psycopg://bushel:bushel@localhost:5544/bushel_test uv run pytest tests/test_ingredients_router.py -v
 ```
 Expected: PASS (4 tests).
 
@@ -1023,7 +1023,7 @@ git commit -m "feat(web): clearer recipe-detail rows + fix-the-match picker"
 - [ ] **Step 1: Run the entire backend suite**
 
 ```bash
-cd backend && DATABASE_URL=postgresql+psycopg://bushel:bushel@localhost:5544/bushel uv run pytest -q
+cd backend && DATABASE_URL=postgresql+psycopg://bushel:bushel@localhost:5544/bushel_test uv run pytest -q
 ```
 Expected: all tests pass.
 
