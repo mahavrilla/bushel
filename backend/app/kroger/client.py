@@ -18,6 +18,23 @@ PROD_BASE = "https://api.kroger.com"
 _SCOPES = "product.compact cart.basic:write profile.compact"
 
 
+def _extract_image_url(images: list | None) -> str | None:
+    """Pick a product image URL: prefer the featured image, then the front perspective,
+    else the first; within it prefer the medium size, else the first available URL."""
+    if not images:
+        return None
+    chosen = next((i for i in images if i.get("featured")), None)
+    if chosen is None:
+        chosen = next((i for i in images if i.get("perspective") == "front"), None)
+    if chosen is None:
+        chosen = images[0]
+    sizes = chosen.get("sizes") or []
+    medium = next((s for s in sizes if s.get("size") == "medium" and s.get("url")), None)
+    if medium:
+        return medium["url"]
+    return next((s["url"] for s in sizes if s.get("url")), None)
+
+
 class KrogerError(Exception):
     """Any Kroger API failure."""
 
@@ -132,11 +149,14 @@ class KrogerClient:
         self._raise_for_status(resp)
 
     def search_products(
-        self, token: str, term: str, location_id: str, limit: int = 10
+        self, token: str, term: str, location_id: str, limit: int = 24, start: int = 0
     ) -> list[Product]:
+        params = {"filter.term": term, "filter.locationId": location_id, "filter.limit": limit}
+        if start:
+            params["filter.start"] = start
         resp = self._http.get(
             "/v1/products",
-            params={"filter.term": term, "filter.locationId": location_id, "filter.limit": limit},
+            params=params,
             headers={"Authorization": f"Bearer {token}"},
         )
         self._raise_for_status(resp)
@@ -156,6 +176,8 @@ class KrogerClient:
                     size=first.get("size"),
                     price=price,
                     stock_level=stock,
+                    brand=row.get("brand"),
+                    image_url=_extract_image_url(row.get("images")),
                 )
             )
         return out
