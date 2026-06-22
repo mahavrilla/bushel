@@ -77,3 +77,12 @@ def test_delete_recipe(db_session):
     assert resp.status_code == 200
     assert resp.json()["items"] == []
     app.dependency_overrides.clear()
+
+
+def test_list_items_include_item_id(db_session):
+    r, ing = _seed_recipe(db_session)
+    client = _client(db_session)
+    client.post("/list/recipes", json={"recipe_id": r.id, "servings": 4})
+    body = client.get("/list").json()
+    assert isinstance(body["items"][0]["item_id"], int)
+    app.dependency_overrides.clear()

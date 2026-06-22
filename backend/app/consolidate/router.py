@@ -64,6 +64,7 @@ def _serialize(draft: GroceryList, db: Session) -> ListRead:
 
     items = [
         ListItemRead(
+            item_id=r.id,
             ingredient_id=r.ingredient_id,
             ingredient_name=ing_by_id[r.ingredient_id].canonical_name,
             category=ing_by_id[r.ingredient_id].category,

@@ -17,7 +17,7 @@ const list = {
   status: "draft",
   recipes: [{ recipe_id: 9, title: "Pancakes", servings: 4, default_servings: 2 }],
   items: [
-    { ingredient_id: 5, ingredient_name: "flour", category: "baking", quantities: [{ qty: 3, unit: "cup" }], source_recipe_ids: [9], pantry_status: "needed" },
+    { item_id: 1, ingredient_id: 5, ingredient_name: "flour", category: "baking", quantities: [{ qty: 3, unit: "cup" }], source_recipe_ids: [9], pantry_status: "needed" },
   ],
 };
 
