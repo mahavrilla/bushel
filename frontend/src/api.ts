@@ -21,6 +21,16 @@ async function json<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export async function extractIngredients(text: string): Promise<string[]> {
+  const res = await fetch(`${BASE_URL}/recipes/extract-ingredients`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+  const body = await json<{ lines: string[] }>(res);
+  return body.lines;
+}
+
 export async function importRecipe(url: string): Promise<RecipeRead> {
   const res = await fetch(`${BASE_URL}/recipes/import`, {
     method: "POST",

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { addIngredient, createIngredient, deleteIngredient, deleteRecipe, importRecipe, listRecipes, searchIngredients, updateIngredient } from "../api";
+import { addIngredient, createIngredient, deleteIngredient, deleteRecipe, extractIngredients, importRecipe, listRecipes, searchIngredients, updateIngredient } from "../api";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -92,6 +92,18 @@ describe("recipe api", () => {
     expect(spy).toHaveBeenCalledWith(
       expect.stringContaining("/recipes/1/ingredients/10"),
       expect.objectContaining({ method: "DELETE" }),
+    );
+  });
+
+  it("extractIngredients posts text and returns lines", async () => {
+    const spy = vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ lines: ["ground turkey", "olive oil"] }), { status: 200 }),
+    );
+    const lines = await extractIngredients("Ingredients\n- Ground turkey");
+    expect(lines).toEqual(["ground turkey", "olive oil"]);
+    expect(spy).toHaveBeenCalledWith(
+      expect.stringContaining("/recipes/extract-ingredients"),
+      expect.objectContaining({ method: "POST" }),
     );
   });
 });
