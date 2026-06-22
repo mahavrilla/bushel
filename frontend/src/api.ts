@@ -1,4 +1,4 @@
-import type { ConfirmProductBody, GroceryListData, KrogerLocation, KrogerStatus, MatchData, PantryView, ProductChoice, RecipeRead, RecipeSummary, SendResult } from "./recipes/types";
+import type { ConfirmProductBody, GroceryListData, KrogerLocation, KrogerStatus, MatchData, PantryView, ProductChoice, RecipeRead, RecipeSummary, SendResult, StapleView } from "./recipes/types";
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
@@ -165,4 +165,38 @@ export async function setPantryDecision(itemId: number, keep: boolean): Promise<
     body: JSON.stringify({ keep }),
   });
   return json<PantryView>(res);
+}
+
+export async function getStaples(): Promise<StapleView> {
+  return json<StapleView>(await fetch(`${BASE_URL}/list/staples`));
+}
+
+export async function addStaple(name: string): Promise<StapleView> {
+  const res = await fetch(`${BASE_URL}/staples`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  return json<StapleView>(res);
+}
+
+export async function removeStaple(id: number): Promise<StapleView> {
+  return json<StapleView>(await fetch(`${BASE_URL}/staples/${id}`, { method: "DELETE" }));
+}
+
+export async function setStapleAutoAdd(id: number, autoAdd: boolean): Promise<StapleView> {
+  const res = await fetch(`${BASE_URL}/staples/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ auto_add: autoAdd }),
+  });
+  return json<StapleView>(res);
+}
+
+export async function addStapleToTrip(id: number): Promise<StapleView> {
+  return json<StapleView>(await fetch(`${BASE_URL}/list/staples/${id}`, { method: "POST" }));
+}
+
+export async function removeStapleFromTrip(id: number): Promise<StapleView> {
+  return json<StapleView>(await fetch(`${BASE_URL}/list/staples/${id}`, { method: "DELETE" }));
 }

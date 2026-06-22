@@ -120,3 +120,15 @@ export interface PantryItem {
 export interface PantryView {
   items: PantryItem[];
 }
+
+export interface StapleItem {
+  id: number;
+  ingredient_id: number;
+  ingredient_name: string | null;
+  auto_add: boolean;
+  on_trip: boolean;
+}
+
+export interface StapleView {
+  staples: StapleItem[];
+}
