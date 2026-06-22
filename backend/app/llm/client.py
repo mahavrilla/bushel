@@ -47,6 +47,10 @@ class ScrapedRecipeLLM(BaseModel):
     raw_lines: list[str]
 
 
+class ExtractedIngredientsLLM(BaseModel):
+    lines: list[str]
+
+
 class LLMClient:
     def __init__(self, api_key: str | None = None) -> None:
         self._api_key = api_key if api_key is not None else get_settings().anthropic_api_key
@@ -108,6 +112,22 @@ class LLMClient:
             output_format=CanonicalizeResult,
             max_tokens=2048,
         )
+
+    def extract_ingredients(self, text: str) -> list[str]:
+        result = self._parse(
+            system=(
+                "You extract the ingredient list from pasted recipe text. Return only the "
+                "ingredients, one per entry in `lines`. Ignore the recipe title, section "
+                "headers (such as 'Ingredients' or 'Steps'), and any numbered or "
+                "instructional steps. If a single line lists multiple ingredients (e.g. "
+                "comma-separated), split it into one entry per ingredient. Drop preparation "
+                "notes (e.g. 'cut into wedges', 'chopped'). Keep each entry short."
+            ),
+            user=text,
+            output_format=ExtractedIngredientsLLM,
+            max_tokens=1024,
+        )
+        return result.lines
 
     def scrape_recipe(self, html: str, url: str) -> ScrapedRecipeLLM:
         return self._parse(

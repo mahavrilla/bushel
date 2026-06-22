@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { createRecipe, importRecipe } from "../api";
+import { createRecipe, extractIngredients, importRecipe } from "../api";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { ErrorBanner } from "../components/ui/ErrorBanner";
@@ -30,6 +30,19 @@ export function AddRecipe() {
     }
   }
 
+  async function extract() {
+    setBusy(true);
+    setError(null);
+    try {
+      const extracted = await extractIngredients(lines);
+      setLines(extracted.join("\n"));
+    } catch {
+      setError("Couldn't extract ingredients — edit manually or try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title="Add recipe" />
@@ -52,22 +65,40 @@ export function AddRecipe() {
           value={servings}
           onChange={(e) => setServings(Number(e.target.value))}
         />
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-heading">Ingredients (one per line)</span>
+        <div className="flex flex-col gap-1 text-sm">
+          <label htmlFor="ingredients" className="font-medium text-heading">
+            Ingredients
+          </label>
+          <p id="ingredients-hint" className="text-xs text-muted">
+            Paste a full recipe and click Extract, or enter one ingredient per line.
+          </p>
           <textarea
+            id="ingredients"
+            aria-describedby="ingredients-hint"
             className="min-h-24 rounded-xl border border-line bg-surface px-3 py-2 text-ink outline-none focus:border-primary focus:ring-1 focus:ring-primary"
             value={lines}
             onChange={(e) => setLines(e.target.value)}
           />
-        </label>
-        <Button
-          disabled={!title.trim() || !lines.trim()}
-          loading={busy}
-          className="self-start"
-          onClick={() => run(() => createRecipe(title, servings, lines.split("\n")))}
-        >
-          Save recipe
-        </Button>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            disabled={!lines.trim()}
+            loading={busy}
+            className="self-start"
+            onClick={extract}
+          >
+            Extract ingredients
+          </Button>
+          <Button
+            disabled={!title.trim() || !lines.trim()}
+            loading={busy}
+            className="self-start"
+            onClick={() => run(() => createRecipe(title, servings, lines.split("\n")))}
+          >
+            Save recipe
+          </Button>
+        </div>
       </Card>
     </div>
   );

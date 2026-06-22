@@ -10,6 +10,7 @@ from app.llm.client import (
     CanonicalizeResult,
     NewIngredientLLM,
     ScrapedRecipeLLM,
+    ExtractedIngredientsLLM,
 )
 
 
@@ -89,3 +90,16 @@ def test_scrape_recipe_truncates_html(mock_anthropic):
     # HTML is truncated to 60000 chars in the prompt
     assert "x" * 60000 in kwargs["messages"][0]["content"]
     assert "x" * 60001 not in kwargs["messages"][0]["content"]
+
+
+@patch("app.llm.client.anthropic.Anthropic")
+def test_extract_ingredients_returns_lines(mock_anthropic):
+    expected = ExtractedIngredientsLLM(lines=["ground turkey", "olive oil"])
+    mock_anthropic.return_value.messages.parse.return_value = MagicMock(
+        stop_reason="end_turn", parsed_output=expected
+    )
+    client = LLMClient(api_key="sk-test")
+    result = client.extract_ingredients("Ingredients\n- Ground turkey\n- Olive oil\nSteps\n1. cook")
+    assert result == ["ground turkey", "olive oil"]
+    _, kwargs = mock_anthropic.return_value.messages.parse.call_args
+    assert kwargs["model"] == "claude-haiku-4-5"
