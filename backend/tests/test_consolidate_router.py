@@ -1,8 +1,10 @@
+from datetime import datetime, timedelta, timezone
+
 from fastapi.testclient import TestClient
 
 from app.db import get_db
 from app.main import app
-from app.models import Ingredient, Recipe, RecipeIngredient
+from app.models import Ingredient, PurchaseLog, Recipe, RecipeIngredient
 
 
 def _client(db_session):
@@ -76,4 +78,31 @@ def test_delete_recipe(db_session):
     resp = client.delete(f"/list/recipes/{r.id}")
     assert resp.status_code == 200
     assert resp.json()["items"] == []
+    app.dependency_overrides.clear()
+
+
+def test_list_items_include_item_id(db_session):
+    r, ing = _seed_recipe(db_session)
+    client = _client(db_session)
+    client.post("/list/recipes", json={"recipe_id": r.id, "servings": 4})
+    body = client.get("/list").json()
+    assert isinstance(body["items"][0]["item_id"], int)
+    app.dependency_overrides.clear()
+
+
+def test_get_list_flags_maybe_have_for_recent_purchase(db_session):
+    r, ing = _seed_recipe(db_session)
+    client = _client(db_session)
+    client.post("/list/recipes", json={"recipe_id": r.id})
+    db_session.add(PurchaseLog(
+        ingredient_id=ing.id,
+        kroger_upc="0001",
+        qty=1.0,
+        unit="cup",
+        purchased_at=datetime.now(timezone.utc) - timedelta(days=5),
+    ))
+    db_session.flush()
+    body = client.get("/list").json()
+    item = body["items"][0]
+    assert item["pantry_status"] == "maybe_have"
     app.dependency_overrides.clear()

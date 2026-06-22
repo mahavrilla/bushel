@@ -20,6 +20,7 @@ class SubQuantity(BaseModel):
 
 
 class ListItemRead(BaseModel):
+    item_id: int
     ingredient_id: int
     ingredient_name: str | None
     category: str | None

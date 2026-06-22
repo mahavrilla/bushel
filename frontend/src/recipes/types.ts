@@ -34,6 +34,7 @@ export interface SubQuantity {
 }
 
 export interface ListItem {
+  item_id: number;
   ingredient_id: number;
   ingredient_name: string | null;
   category: string | null;
