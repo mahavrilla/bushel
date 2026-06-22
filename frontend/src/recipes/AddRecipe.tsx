@@ -65,17 +65,21 @@ export function AddRecipe() {
           value={servings}
           onChange={(e) => setServings(Number(e.target.value))}
         />
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-heading">Ingredients</span>
-          <span className="text-xs text-muted">
+        <div className="flex flex-col gap-1 text-sm">
+          <label htmlFor="ingredients" className="font-medium text-heading">
+            Ingredients
+          </label>
+          <p id="ingredients-hint" className="text-xs text-muted">
             Paste a full recipe and click Extract, or enter one ingredient per line.
-          </span>
+          </p>
           <textarea
+            id="ingredients"
+            aria-describedby="ingredients-hint"
             className="min-h-24 rounded-xl border border-line bg-surface px-3 py-2 text-ink outline-none focus:border-primary focus:ring-1 focus:ring-primary"
             value={lines}
             onChange={(e) => setLines(e.target.value)}
           />
-        </label>
+        </div>
         <div className="flex gap-2">
           <Button
             variant="secondary"
