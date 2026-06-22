@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 
 from fastapi.testclient import TestClient
 
@@ -110,7 +110,7 @@ def test_add_ingredient_endpoint(db_session):
         resp = client.post(f"/recipes/{recipe.id}/ingredients", json={"raw_text": "2 cups flour"})
     assert resp.status_code == 201
     assert resp.json()["id"] == recipe.id
-    mock_add.assert_called_once()
+    mock_add.assert_called_once_with(db_session, recipe.id, "2 cups flour", ANY)
     app.dependency_overrides.clear()
 
 

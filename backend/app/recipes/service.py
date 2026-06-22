@@ -99,6 +99,7 @@ def add_ingredient(db: Session, recipe_id: int, raw_text: str, llm: LLMClient) -
             qty=parsed.qty,
             unit=parsed.unit,
             ingredient_id=result.ingredient_id,
+            # no source_url branch (cf. _build_recipe): an added line is always hand-typed
             parse_source="manual" if parsed.source == "library" else parsed.source,
             needs_review=_needs_review(parsed.source, parsed.qty, result.is_new),
         )
