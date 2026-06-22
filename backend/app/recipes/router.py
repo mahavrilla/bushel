@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.consolidate.units import normalize_unit
 from app.db import get_db
 from app.llm.client import LLMClient, LLMUnavailableError
 from app.models import Ingredient, Recipe, RecipeIngredient
@@ -21,7 +22,6 @@ from app.recipes.schemas import (
     RecipeRead,
     RecipeSummary,
 )
-from app.consolidate.units import normalize_unit
 from app.recipes.service import (
     RecipeNotFoundError,
     add_ingredient,
