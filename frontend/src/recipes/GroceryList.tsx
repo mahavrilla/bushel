@@ -8,6 +8,7 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { Spinner } from "../components/ui/Spinner";
 import type { GroceryListData, ListRecipe, SubQuantity } from "./types";
 import { MatchAndSend } from "./MatchAndSend";
+import { PantryCheck } from "./PantryCheck";
 
 function formatQuantities(quantities: SubQuantity[]): string {
   if (quantities.length === 0) return "";
@@ -104,6 +105,7 @@ export function GroceryList() {
             </ul>
           </Card>
 
+          <PantryCheck />
           <MatchAndSend />
         </>
       )}

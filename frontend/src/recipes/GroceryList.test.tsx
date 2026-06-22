@@ -7,6 +7,7 @@ import { GroceryList } from "./GroceryList";
 
 beforeEach(() => {
   vi.spyOn(api, "getMatch").mockResolvedValue({ connected: false, store_location_id: null, items: [] });
+  vi.spyOn(api, "getPantry").mockResolvedValue({ items: [] });
 });
 afterEach(() => vi.restoreAllMocks());
 
