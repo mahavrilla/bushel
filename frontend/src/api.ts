@@ -203,10 +203,6 @@ export async function sendCart(modality: string): Promise<SendResult> {
   return json<SendResult>(res);
 }
 
-export async function getPantry(): Promise<PantryView> {
-  return json<PantryView>(await fetch(`${BASE_URL}/list/pantry`));
-}
-
 export async function setPantryDecision(itemId: number, keep: boolean): Promise<PantryView> {
   const res = await fetch(`${BASE_URL}/list/items/${itemId}/pantry`, {
     method: "POST",

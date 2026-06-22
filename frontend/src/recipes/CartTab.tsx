@@ -85,7 +85,7 @@ export function CartTab() {
           <p className="flex items-center gap-2 font-semibold text-heading">
             {it.ingredient_name}
             {it.current && <span className="text-success" aria-hidden="true">✓</span>}
-            {it.purchase_qty_estimated && <Pill tone="warning">Check qty</Pill>}
+            {it.current && it.purchase_qty_estimated && <Pill tone="warning">Check qty</Pill>}
           </p>
           {it.current ? (
             <p className="text-sm text-muted">

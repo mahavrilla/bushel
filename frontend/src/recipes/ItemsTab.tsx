@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { removeRecipeFromList, setPantryDecision, updateListServings } from "../api";
 import { Button } from "../components/ui/Button";
@@ -25,6 +25,10 @@ function sourceLabel(item: ListItem, titleById: Record<number, string>): string 
 
 function RecipeRow({ recipe, reload }: { recipe: ListRecipe; reload: () => void }) {
   const [servings, setServings] = useState(recipe.servings.toString());
+
+  useEffect(() => {
+    setServings(recipe.servings.toString());
+  }, [recipe.servings]);
 
   async function update() {
     const n = Number(servings);

@@ -22,6 +22,7 @@ from app.consolidate.service import (
     set_servings,
 )
 from app.db import get_db
+from app.pantry.service import evaluate as evaluate_pantry
 from app.models import (
     GroceryList,
     GroceryListItem,
@@ -80,6 +81,7 @@ def _serialize(draft: GroceryList, db: Session) -> ListRead:
 @router.get("", response_model=ListRead)
 def get_list(db: Session = Depends(get_db)):
     draft = get_or_create_draft(db)
+    evaluate_pantry(db)
     db.commit()
     return _serialize(draft, db)
 

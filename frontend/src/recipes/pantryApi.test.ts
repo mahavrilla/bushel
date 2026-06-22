@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { getPantry, setPantryDecision } from "../api";
+import { setPantryDecision } from "../api";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -13,12 +13,6 @@ function mockFetch(body: unknown) {
 }
 
 describe("pantry api", () => {
-  it("getPantry calls /list/pantry", async () => {
-    const f = mockFetch({ items: [] });
-    await getPantry();
-    expect(f.mock.calls[0][0]).toContain("/list/pantry");
-  });
-
   it("setPantryDecision POSTs keep", async () => {
     const f = mockFetch({ items: [] });
     await setPantryDecision(5, false);
