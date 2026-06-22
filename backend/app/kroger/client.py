@@ -152,7 +152,7 @@ class KrogerClient:
         self, token: str, term: str, location_id: str, limit: int = 24, start: int = 0
     ) -> list[Product]:
         params = {"filter.term": term, "filter.locationId": location_id, "filter.limit": limit}
-        if start:
+        if start > 0:
             params["filter.start"] = start
         resp = self._http.get(
             "/v1/products",

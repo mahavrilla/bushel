@@ -30,6 +30,7 @@ def test_search_products_parses_first_item_fields():
         assert request.url.path == "/v1/products"
         assert request.url.params["filter.term"] == "flour"
         assert request.url.params["filter.locationId"] == "L1"
+        assert request.url.params["filter.limit"] == "24"
         return httpx.Response(200, json={"data": [
             {"upc": "0001", "description": "AP Flour",
              "items": [{"size": "5 lb", "price": {"regular": 3.49}, "inventory": {"stockLevel": "HIGH"}}]},
@@ -121,3 +122,15 @@ def test_search_products_omits_filter_start_on_first_page():
         return httpx.Response(200, json={"data": []})
 
     _client(handler).search_products("tok", "x", "L1", limit=24, start=0)
+
+
+def test_search_products_featured_image_without_url_yields_none():
+    def handler(request):
+        return httpx.Response(200, json={"data": [
+            {"upc": "0001", "description": "X",
+             "images": [{"featured": True, "sizes": [{"size": "medium"}]}],
+             "items": []},
+        ]})
+
+    prods = _client(handler).search_products("tok", "x", "L1")
+    assert prods[0].image_url is None
