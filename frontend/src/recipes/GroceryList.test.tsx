@@ -7,7 +7,6 @@ import { GroceryList } from "./GroceryList";
 
 beforeEach(() => {
   vi.spyOn(api, "getMatch").mockResolvedValue({ connected: false, store_location_id: null, items: [] });
-  vi.spyOn(api, "getPantry").mockResolvedValue({ items: [] });
   vi.spyOn(api, "getStaples").mockResolvedValue({ staples: [] });
 });
 afterEach(() => vi.restoreAllMocks());
@@ -17,38 +16,28 @@ const list = {
   status: "draft",
   recipes: [{ recipe_id: 9, title: "Pancakes", servings: 4, default_servings: 2 }],
   items: [
-    { item_id: 1, ingredient_id: 5, ingredient_name: "flour", category: "baking", quantities: [{ qty: 3, unit: "cup" }], source_recipe_ids: [9], pantry_status: "needed" },
+    { item_id: 100, ingredient_id: 5, ingredient_name: "flour", category: "baking", quantities: [{ qty: 3, unit: "cup" }], source_recipe_ids: [9], pantry_status: "needed" },
   ],
 };
 
 describe("GroceryList", () => {
-  it("renders recipes and shopping items", async () => {
+  it("shows the Items tab with consolidated items by default", async () => {
     vi.spyOn(api, "getList").mockResolvedValue(list);
     render(<GroceryList />);
-    expect(await screen.findByText(/pancakes/i)).toBeInTheDocument();
-    expect(await screen.findByText(/flour/i)).toBeInTheDocument();
+    expect(await screen.findByText("flour")).toBeInTheDocument();
   });
 
-  it("shows an empty state when no recipes are on the list", async () => {
+  it("empty state when no recipes", async () => {
     vi.spyOn(api, "getList").mockResolvedValue({ id: 1, status: "draft", recipes: [], items: [] });
     render(<GroceryList />);
     expect(await screen.findByText(/no recipes on your list/i)).toBeInTheDocument();
   });
 
-  it("includes the Review & send panel", async () => {
+  it("switches to the Cart tab", async () => {
     vi.spyOn(api, "getList").mockResolvedValue(list);
     render(<GroceryList />);
-    expect(await screen.findByText(/review & send/i)).toBeInTheDocument();
-  });
-
-  it("updates a recipe's servings via updateListServings", async () => {
-    vi.spyOn(api, "getList").mockResolvedValue(list);
-    const update = vi.spyOn(api, "updateListServings").mockResolvedValue(list);
-    render(<GroceryList />);
-    const input = await screen.findByLabelText(/servings for pancakes/i);
-    await userEvent.clear(input);
-    await userEvent.type(input, "6");
-    await userEvent.click(screen.getByRole("button", { name: /update pancakes/i }));
-    await waitFor(() => expect(update).toHaveBeenCalledWith(9, 6));
+    await screen.findByText("flour");
+    await userEvent.click(screen.getByRole("tab", { name: /cart/i }));
+    await waitFor(() => expect(api.getMatch).toHaveBeenCalled());
   });
 });
