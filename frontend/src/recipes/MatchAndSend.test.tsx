@@ -63,4 +63,22 @@ describe("MatchAndSend", () => {
     fireEvent.click(await screen.findByRole("button", { name: /send to kroger cart/i }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/reconnect/i);
   });
+
+  it("shows the matched product and a Change action when already resolved", async () => {
+    vi.spyOn(api, "getMatch").mockResolvedValue({
+      connected: true,
+      store_location_id: "L1",
+      items: [
+        {
+          item_id: 1, ingredient_id: 2, ingredient_name: "flour",
+          total_qty: 3, total_unit: "lb", purchase_qty: 3, purchase_qty_estimated: false,
+          kroger_upc: "0001",
+          current: { upc: "0001", description: "AP Flour", size: "5 lb", price: null, stock_level: null },
+        },
+      ],
+    });
+    render(<MatchAndSend />);
+    expect(await screen.findByText(/AP Flour/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /change/i })).toBeInTheDocument();
+  });
 });

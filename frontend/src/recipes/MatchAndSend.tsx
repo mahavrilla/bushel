@@ -88,10 +88,12 @@ export function MatchAndSend() {
             </div>
             <div className="mt-2 flex items-center gap-2">
               <span className="text-sm text-ink">
-                {it.current ? `Product: ${it.current.description}` : "No product chosen"}
+                {it.current
+                  ? `Product: ${it.current.description}${it.current.size ? ` (${it.current.size})` : ""}`
+                  : "No product chosen yet"}
               </span>
               <Button variant="secondary" className="ml-auto" onClick={() => find(it.item_id, it.ingredient_name)}>
-                Find product
+                {it.current ? "Change" : "Find product"}
               </Button>
             </div>
             <ul className="mt-2 flex flex-col gap-1">
