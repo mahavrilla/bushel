@@ -12,7 +12,7 @@ export function EmptyState({
   onAction?: () => void;
 }) {
   return (
-    <div className="rounded-xl border border-dashed border-line bg-surface p-10 text-center">
+    <div className="rounded-2xl border border-dashed border-line bg-surface p-10 text-center">
       {icon && <div className="mb-2 text-3xl">{icon}</div>}
       <p className="text-muted">{message}</p>
       {actionLabel && onAction && (

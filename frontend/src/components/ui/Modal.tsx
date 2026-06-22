@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { CloseIcon } from "./icons";
 
 export function Modal({
   title,
@@ -34,10 +35,10 @@ export function Modal({
           <button
             type="button"
             aria-label="Close"
-            className="ml-auto text-xl leading-none text-muted hover:text-heading"
+            className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg text-muted hover:bg-canvas hover:text-heading"
             onClick={onClose}
           >
-            ✕
+            <CloseIcon size={18} />
           </button>
         </div>
         <div className="overflow-y-auto p-4">{children}</div>

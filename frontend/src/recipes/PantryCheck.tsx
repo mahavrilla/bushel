@@ -39,7 +39,7 @@ export function PantryCheck() {
       {error && <ErrorBanner message={error} />}
       <ul className="flex flex-col gap-2">
         {flagged.map((i) => (
-          <li key={i.item_id} className="flex flex-wrap items-center gap-2 rounded-xl bg-tint-amber px-3 py-2">
+          <li key={i.item_id} className="flex flex-wrap items-center gap-2 rounded-xl bg-warning-tint px-3 py-2">
             <strong className="text-heading">{i.ingredient_name}</strong>
             <span className="text-sm text-ink">
               bought {i.last_qty ?? "?"} {i.last_unit ?? ""}, {i.days_ago} days ago
