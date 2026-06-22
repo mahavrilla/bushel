@@ -63,6 +63,7 @@ export function ProductPickerModal({
   }
 
   useEffect(() => {
+    // itemId/ingredientName are fixed for the modal's lifetime; search once on open.
     run(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -149,9 +150,9 @@ export function ProductPickerModal({
           <Spinner />
         </div>
       )}
-      {!loading && !reachedEnd && view.length > 0 && (
+      {!loading && !reachedEnd && results.length > 0 && (
         <div className="mt-3 flex justify-center">
-          <Button variant="secondary" onClick={() => run(false)}>
+          <Button variant="secondary" onClick={() => run(false)} disabled={loading}>
             Load more
           </Button>
         </div>
