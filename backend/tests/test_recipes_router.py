@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 
 from app.db import get_db
 from app.main import app
-from app.models import Ingredient, Recipe, RecipeIngredient
+from app.models import GroceryList, GroceryListItem, GroceryListRecipe, Ingredient, Recipe, RecipeIngredient
 
 
 def _client(db_session):
@@ -83,4 +83,40 @@ def test_import_endpoint(db_session):
         resp = client.post("/recipes/import", json={"url": "https://x.com"})
     assert resp.status_code == 201
     assert resp.json()["title"] == "Imported"
+    app.dependency_overrides.clear()
+
+
+def test_delete_recipe_removes_it(db_session):
+    recipe, ri, ing = _seed_recipe(db_session)
+    client = _client(db_session)
+    resp = client.delete(f"/recipes/{recipe.id}")
+    assert resp.status_code == 204
+    assert db_session.get(Recipe, recipe.id) is None
+    app.dependency_overrides.clear()
+
+
+def test_delete_recipe_404_when_missing(db_session):
+    client = _client(db_session)
+    resp = client.delete("/recipes/99999")
+    assert resp.status_code == 404
+    app.dependency_overrides.clear()
+
+
+def test_delete_recipe_on_list_recomputes_draft(db_session):
+    recipe, ri, ing = _seed_recipe(db_session)
+    draft = GroceryList(name="Draft", status="draft")
+    db_session.add(draft)
+    db_session.flush()
+    db_session.add(GroceryListRecipe(list_id=draft.id, recipe_id=recipe.id, servings=2))
+    db_session.add(
+        GroceryListItem(list_id=draft.id, ingredient_id=ing.id, source_recipe_ids=[recipe.id])
+    )
+    db_session.flush()
+    client = _client(db_session)
+    resp = client.delete(f"/recipes/{recipe.id}")
+    assert resp.status_code == 204
+    remaining = (
+        db_session.query(GroceryListItem).filter_by(list_id=draft.id).count()
+    )
+    assert remaining == 0
     app.dependency_overrides.clear()
