@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import { getRecipe, updateIngredient } from "../api";
+import { addIngredient, deleteIngredient, getRecipe, updateIngredient } from "../api";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { ErrorBanner } from "../components/ui/ErrorBanner";
@@ -50,12 +50,30 @@ function Row({
     }
   }
 
+  async function remove() {
+    if (!window.confirm(`Delete "${ingredient.raw_text}"?`)) return;
+    setError(null);
+    try {
+      onSaved(await deleteIngredient(recipeId, ingredient.id));
+    } catch {
+      setError("Couldn't delete — please try again.");
+    }
+  }
+
   return (
     <Card className={ingredient.needs_review ? "border-accent bg-tint-amber" : ""}>
       {error && <ErrorBanner message={error} />}
       <div className="mb-2 flex items-center gap-2">
         <span className="font-medium text-heading">{ingredient.raw_text}</span>
         {ingredient.needs_review && <Pill tone="warning">Needs review</Pill>}
+        <Button
+          variant="link"
+          className="ml-auto"
+          aria-label={`Delete ${ingredient.raw_text}`}
+          onClick={remove}
+        >
+          🗑
+        </Button>
       </div>
 
       <div className="flex items-center gap-2 text-sm">
@@ -87,10 +105,24 @@ export function RecipeDetail() {
   const { id } = useParams();
   const recipeId = Number(id);
   const [recipe, setRecipe] = useState<RecipeRead | null>(null);
+  const [newLine, setNewLine] = useState("");
+  const [addError, setAddError] = useState<string | null>(null);
 
   useEffect(() => {
     getRecipe(recipeId).then(setRecipe).catch(() => setRecipe(null));
   }, [recipeId]);
+
+  async function add() {
+    const text = newLine.trim();
+    if (!text) return;
+    setAddError(null);
+    try {
+      setRecipe(await addIngredient(recipeId, text));
+      setNewLine("");
+    } catch {
+      setAddError("Couldn't add that ingredient — please try again.");
+    }
+  }
 
   if (recipe === null)
     return (
@@ -120,6 +152,25 @@ export function RecipeDetail() {
           </li>
         ))}
       </ul>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          add();
+        }}
+        className="mt-4 flex items-end gap-2"
+      >
+        <Input
+          label="Add an ingredient"
+          placeholder="e.g. 2 cloves garlic"
+          value={newLine}
+          onChange={(e) => setNewLine(e.target.value)}
+          className="w-full"
+        />
+        <Button type="submit" disabled={!newLine.trim()}>
+          Add
+        </Button>
+      </form>
+      {addError && <ErrorBanner message={addError} />}
     </div>
   );
 }

@@ -1,8 +1,9 @@
+import pytest
 from unittest.mock import MagicMock, patch
 
 from app.ingredients.parser import ParsedLine
 from app.recipes.scraper import ScrapedRecipe
-from app.recipes.service import create_from_manual, import_from_url
+from app.recipes.service import add_ingredient, create_from_manual, import_from_url, RecipeNotFoundError
 from app.models import Recipe, RecipeIngredient, Ingredient
 
 
@@ -68,3 +69,51 @@ def test_import_from_url_uses_scraper(mock_parse, mock_scrape, db_session):
     saved = db_session.get(Recipe, recipe.id)
     assert saved.title == "Pancakes"
     assert saved.source_url == "https://example.com/pancakes"
+
+
+@patch("app.recipes.service.parse_line")
+def test_add_ingredient_appends_parsed_row(mock_parse, db_session):
+    mock_parse.return_value = ParsedLine(2.0, "cup", "flour", "library")
+    flour = Ingredient(canonical_name="flour", aliases=[])
+    db_session.add(flour)
+    recipe = Recipe(title="T", default_servings=1)
+    db_session.add(recipe)
+    db_session.flush()
+
+    from app.ingredients.canonicalize import CanonResult
+
+    with patch("app.recipes.service.canonicalize_names") as mock_canon:
+        mock_canon.return_value = {"flour": CanonResult(flour.id, False)}
+        add_ingredient(db_session, recipe.id, "2 cups flour", llm=MagicMock())
+
+    rows = db_session.query(RecipeIngredient).filter_by(recipe_id=recipe.id).all()
+    assert len(rows) == 1
+    assert rows[0].qty == 2.0 and rows[0].unit == "cup"
+    assert rows[0].ingredient_id == flour.id
+    assert rows[0].parse_source == "manual"  # library entry typed by hand
+    assert rows[0].needs_review is False
+
+
+@patch("app.recipes.service.parse_line")
+def test_add_ingredient_flags_low_confidence(mock_parse, db_session):
+    mock_parse.return_value = ParsedLine(None, None, "saffron", "library_low_confidence")
+    saffron = Ingredient(canonical_name="saffron", aliases=[])
+    db_session.add(saffron)
+    recipe = Recipe(title="T", default_servings=1)
+    db_session.add(recipe)
+    db_session.flush()
+
+    from app.ingredients.canonicalize import CanonResult
+
+    with patch("app.recipes.service.canonicalize_names") as mock_canon:
+        mock_canon.return_value = {"saffron": CanonResult(saffron.id, False)}
+        add_ingredient(db_session, recipe.id, "a pinch of saffron", llm=MagicMock())
+
+    row = db_session.query(RecipeIngredient).filter_by(recipe_id=recipe.id).one()
+    assert row.needs_review is True
+    assert row.parse_source == "library_low_confidence"
+
+
+def test_add_ingredient_missing_recipe_raises(db_session):
+    with pytest.raises(RecipeNotFoundError):
+        add_ingredient(db_session, 99999, "1 egg", llm=MagicMock())

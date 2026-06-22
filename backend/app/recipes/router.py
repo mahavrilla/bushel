@@ -11,6 +11,7 @@ from app.llm.client import LLMClient
 from app.models import Ingredient, Recipe, RecipeIngredient
 from app.recipes.scraper import ScrapeError
 from app.recipes.schemas import (
+    AddIngredientRequest,
     IngredientRead,
     IngredientUpdate,
     ImportRequest,
@@ -20,6 +21,7 @@ from app.recipes.schemas import (
 )
 from app.recipes.service import (
     RecipeNotFoundError,
+    add_ingredient,
     create_from_manual,
     delete_recipe,
     import_from_url,
@@ -83,6 +85,21 @@ def create_recipe(body: ManualRecipeRequest, db: Session = Depends(get_db), llm:
     return _serialize(recipe, db)
 
 
+@router.post("/{recipe_id}/ingredients", response_model=RecipeRead, status_code=201)
+def add_ingredient_endpoint(
+    recipe_id: int,
+    body: AddIngredientRequest,
+    db: Session = Depends(get_db),
+    llm: LLMClient = Depends(get_llm),
+):
+    try:
+        recipe = add_ingredient(db, recipe_id, body.raw_text, llm)
+    except RecipeNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    db.commit()
+    return _serialize(recipe, db)
+
+
 @router.get("", response_model=list[RecipeSummary])
 def list_recipes(db: Session = Depends(get_db)):
     recipes = db.execute(select(Recipe).order_by(Recipe.created_at.desc())).scalars().all()
@@ -104,6 +121,17 @@ def delete_recipe_endpoint(recipe_id: int, db: Session = Depends(get_db)):
     except RecipeNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     db.commit()
+
+
+@router.delete("/{recipe_id}/ingredients/{ingredient_row_id}", response_model=RecipeRead)
+def delete_ingredient(recipe_id: int, ingredient_row_id: int, db: Session = Depends(get_db)):
+    row = db.get(RecipeIngredient, ingredient_row_id)
+    if row is None or row.recipe_id != recipe_id:
+        raise HTTPException(status_code=404, detail="Ingredient not found")
+    db.delete(row)
+    db.commit()
+    recipe = db.get(Recipe, recipe_id)
+    return _serialize(recipe, db)
 
 
 @router.patch("/{recipe_id}/ingredients/{ingredient_row_id}", response_model=RecipeRead)

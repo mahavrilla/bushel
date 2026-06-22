@@ -64,6 +64,21 @@ export async function updateIngredient(
   return json<RecipeRead>(res);
 }
 
+export async function addIngredient(recipeId: number, rawText: string): Promise<RecipeRead> {
+  const res = await fetch(`${BASE_URL}/recipes/${recipeId}/ingredients`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ raw_text: rawText }),
+  });
+  return json<RecipeRead>(res);
+}
+
+export async function deleteIngredient(recipeId: number, rowId: number): Promise<RecipeRead> {
+  return json<RecipeRead>(
+    await fetch(`${BASE_URL}/recipes/${recipeId}/ingredients/${rowId}`, { method: "DELETE" }),
+  );
+}
+
 export async function deleteRecipe(id: number): Promise<void> {
   const res = await fetch(`${BASE_URL}/recipes/${id}`, { method: "DELETE" });
   if (!res.ok) throw new ApiError(res.status);

@@ -68,4 +68,40 @@ describe("RecipeDetail", () => {
     await userEvent.click(await screen.findByRole("button", { name: "garlic powder" }));
     await waitFor(() => expect(update).toHaveBeenCalledWith(1, 10, { ingredient_id: 8 }));
   });
+
+  it("adds an ingredient via the add form", async () => {
+    vi.spyOn(api, "getRecipe").mockResolvedValue(recipe);
+    const add = vi.spyOn(api, "addIngredient").mockResolvedValue({
+      ...recipe,
+      ingredients: [
+        ...recipe.ingredients,
+        { id: 11, raw_text: "2 cloves garlic", qty: 2, unit: "clove", ingredient_id: 6, ingredient_name: "garlic", parse_source: "manual", needs_review: false },
+      ],
+    });
+    renderWithRouter(<RecipeDetail />, { path: "/recipes/:id", initialEntries: ["/recipes/1"] });
+    await screen.findByText("2 cups flour");
+    await userEvent.type(screen.getByRole("textbox", { name: /add an ingredient/i }), "2 cloves garlic");
+    await userEvent.click(screen.getByRole("button", { name: /^add$/i }));
+    await waitFor(() => expect(add).toHaveBeenCalledWith(1, "2 cloves garlic"));
+    expect(await screen.findByText("2 cloves garlic")).toBeInTheDocument();
+  });
+
+  it("deletes an ingredient after confirmation", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    vi.spyOn(api, "getRecipe").mockResolvedValue(recipe);
+    const del = vi.spyOn(api, "deleteIngredient").mockResolvedValue({ ...recipe, ingredients: [] });
+    renderWithRouter(<RecipeDetail />, { path: "/recipes/:id", initialEntries: ["/recipes/1"] });
+    await userEvent.click(await screen.findByRole("button", { name: /delete 2 cups flour/i }));
+    await waitFor(() => expect(del).toHaveBeenCalledWith(1, 10));
+    expect(screen.queryByText("2 cups flour")).not.toBeInTheDocument();
+  });
+
+  it("does not delete when confirmation is cancelled", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    vi.spyOn(api, "getRecipe").mockResolvedValue(recipe);
+    const del = vi.spyOn(api, "deleteIngredient");
+    renderWithRouter(<RecipeDetail />, { path: "/recipes/:id", initialEntries: ["/recipes/1"] });
+    await userEvent.click(await screen.findByRole("button", { name: /delete 2 cups flour/i }));
+    expect(del).not.toHaveBeenCalled();
+  });
 });
