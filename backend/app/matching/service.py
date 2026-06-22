@@ -55,7 +55,29 @@ def _current_choice(db: Session, item: GroceryListItem) -> ProductChoice | None:
     )
 
 
+def apply_remembered_products(db: Session) -> None:
+    """Re-derive kroger_upc + purchase_qty from the remembered ingredient_product_map for
+    unresolved kept items. Idempotent; this is how confirmed picks survive list rebuilds."""
+    draft = get_or_create_draft(db)
+    maps = {
+        m.ingredient_id: m
+        for m in db.execute(select(IngredientProductMap)).scalars().all()
+    }
+    for item in _kept_items(db, draft.id):
+        if item.kroger_upc is not None:
+            continue
+        mapping = maps.get(item.ingredient_id)
+        if mapping is None:
+            continue
+        item.kroger_upc = mapping.kroger_upc
+        qty, estimated = compute_purchase_qty(item.total_qty, item.total_unit, mapping.package_size)
+        item.purchase_qty = qty
+        item.purchase_qty_estimated = estimated
+    db.flush()
+
+
 def get_match_state(db: Session) -> MatchRead:
+    apply_remembered_products(db)
     draft = get_or_create_draft(db)
     ing_by_id = {i.id: i for i in db.execute(select(Ingredient)).scalars().all()}
     items = [
@@ -142,6 +164,7 @@ def send_to_cart(db: Session, client: KrogerClient, modality: str = "PICKUP") ->
     """Push each item with a UPC to the cart, one PUT per item. Logs only successes to
     purchase_log. Raises NotConnectedError/KrogerAuthError if the token is unusable."""
     draft = get_or_create_draft(db)
+    apply_remembered_products(db)
     token = kroger_auth.get_valid_token(db, client)  # NotConnected/Auth errors propagate
 
     results: list[SendItemResult] = []
