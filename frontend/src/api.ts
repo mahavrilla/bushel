@@ -136,11 +136,11 @@ export async function confirmProduct(
   return json<MatchData>(res);
 }
 
-export async function setStore(locationId: string): Promise<MatchData> {
+export async function setStore(locationId: string, name?: string | null): Promise<MatchData> {
   const res = await fetch(`${BASE_URL}/list/store`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ location_id: locationId }),
+    body: JSON.stringify({ location_id: locationId, name: name ?? null }),
   });
   return json<MatchData>(res);
 }

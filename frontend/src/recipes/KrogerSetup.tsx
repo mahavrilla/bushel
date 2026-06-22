@@ -11,12 +11,12 @@ export function KrogerSetup() {
   const [status, setStatus] = useState<KrogerStatus | null>(null);
   const [zip, setZip] = useState("");
   const [stores, setStores] = useState<KrogerLocation[]>([]);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selectedName, setSelectedName] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     getKrogerStatus().then(setStatus).catch(() => setStatus(null));
-    getMatch().then((m) => setSelected(m.store_location_id)).catch(() => {});
+    getMatch().then((m) => setSelectedName(m.store_name ?? null)).catch(() => {});
   }, []);
 
   async function connect() {
@@ -33,9 +33,9 @@ export function KrogerSetup() {
     }
   }
 
-  async function choose(locationId: string) {
-    const match = await setStore(locationId);
-    setSelected(match.store_location_id);
+  async function choose(loc: KrogerLocation) {
+    const match = await setStore(loc.location_id, loc.name);
+    setSelectedName(match.store_name ?? null);
   }
 
   return (
@@ -54,7 +54,7 @@ export function KrogerSetup() {
 
       <Card className="flex flex-col gap-3">
         <h3 className="text-lg font-semibold text-heading">Home store</h3>
-        {selected && <p className="text-sm text-success">Selected store: {selected}</p>}
+        {selectedName && <p className="text-sm text-success">Home store: {selectedName}</p>}
         <div className="flex items-end gap-2">
           <Input label="Zip code" value={zip} onChange={(e) => setZip(e.target.value)} className="w-32" />
           <Button variant="secondary" loading={busy} onClick={findStores}>
@@ -68,7 +68,7 @@ export function KrogerSetup() {
                 <div className="text-sm font-medium text-heading">{s.name}</div>
                 <div className="text-xs text-muted">{s.address}</div>
               </div>
-              <Button variant="secondary" className="ml-auto" onClick={() => choose(s.location_id)}>
+              <Button variant="secondary" className="ml-auto" onClick={() => choose(s)}>
                 Use this store
               </Button>
             </li>

@@ -85,6 +85,7 @@ export interface MatchItem {
 export interface MatchData {
   connected: boolean;
   store_location_id: string | null;
+  store_name?: string | null;
   items: MatchItem[];
 }
 
