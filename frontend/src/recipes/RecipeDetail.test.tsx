@@ -99,7 +99,7 @@ describe("RecipeDetail", () => {
   it("does not delete when confirmation is cancelled", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(false);
     vi.spyOn(api, "getRecipe").mockResolvedValue(recipe);
-    const del = vi.spyOn(api, "deleteIngredient").mockResolvedValue(recipe);
+    const del = vi.spyOn(api, "deleteIngredient");
     renderWithRouter(<RecipeDetail />, { path: "/recipes/:id", initialEntries: ["/recipes/1"] });
     await userEvent.click(await screen.findByRole("button", { name: /delete 2 cups flour/i }));
     expect(del).not.toHaveBeenCalled();
