@@ -26,11 +26,22 @@ describe("kroger api", () => {
     expect(f.mock.calls[0][0]).toContain("/list/match");
   });
 
-  it("searchItemProducts hits the per-item products endpoint", async () => {
+  it("searchItemProducts hits the per-item products endpoint with paging params", async () => {
     const f = mockFetch([{ upc: "0001", description: "Flour" }]);
-    const res = await searchItemProducts(5, "flour");
+    const res = await searchItemProducts(5, "flour", 24, 24);
     expect(res[0].upc).toBe("0001");
-    expect(f.mock.calls[0][0]).toContain("/list/items/5/products?q=flour");
+    const url = f.mock.calls[0][0] as string;
+    expect(url).toContain("/list/items/5/products?q=flour");
+    expect(url).toContain("start=24");
+    expect(url).toContain("limit=24");
+  });
+
+  it("searchItemProducts defaults start to 0 and limit to 24", async () => {
+    const f = mockFetch([{ upc: "0001", description: "Flour" }]);
+    await searchItemProducts(5, "flour");
+    const url = f.mock.calls[0][0] as string;
+    expect(url).toContain("start=0");
+    expect(url).toContain("limit=24");
   });
 
   it("confirmProduct POSTs the chosen product", async () => {

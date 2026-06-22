@@ -73,6 +73,8 @@ export interface ProductChoice {
   size: string | null;
   price: number | null;
   stock_level: string | null;
+  brand?: string | null;
+  image_url?: string | null;
 }
 
 export interface MatchItem {

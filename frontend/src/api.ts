@@ -138,9 +138,13 @@ export async function getMatch(): Promise<MatchData> {
 export async function searchItemProducts(
   itemId: number,
   q: string,
+  start = 0,
+  limit = 24,
 ): Promise<ProductChoice[]> {
   return json<ProductChoice[]>(
-    await fetch(`${BASE_URL}/list/items/${itemId}/products?q=${encodeURIComponent(q)}`),
+    await fetch(
+      `${BASE_URL}/list/items/${itemId}/products?q=${encodeURIComponent(q)}&start=${start}&limit=${limit}`,
+    ),
   );
 }
 

@@ -33,15 +33,38 @@ describe("MatchAndSend", () => {
     expect(screen.getByText(/check quantity/i)).toBeInTheDocument();
   });
 
-  it("searches products for an item", async () => {
+  it("opens the product modal and searches when Find product is clicked", async () => {
     vi.spyOn(api, "getMatch").mockResolvedValue(baseMatch);
     const search = vi.spyOn(api, "searchItemProducts").mockResolvedValue([
       { upc: "0001", description: "AP Flour", size: "5 lb", price: 3.49, stock_level: "HIGH" },
     ]);
     render(<MatchAndSend />);
     fireEvent.click(await screen.findByRole("button", { name: /find product/i }));
-    await waitFor(() => expect(search).toHaveBeenCalledWith(1, "flour"));
+    await waitFor(() => expect(search).toHaveBeenCalledWith(1, "flour", 0, 24));
     expect(await screen.findByText(/AP Flour/)).toBeInTheDocument();
+  });
+
+  it("confirms the chosen product and closes the modal", async () => {
+    vi.spyOn(api, "getMatch").mockResolvedValue(baseMatch);
+    vi.spyOn(api, "searchItemProducts").mockResolvedValue([
+      { upc: "0001", description: "AP Flour", size: "5 lb", price: 3.49, stock_level: "HIGH" },
+    ]);
+    const confirm = vi.spyOn(api, "confirmProduct").mockResolvedValue({
+      ...baseMatch,
+      items: [{ ...baseMatch.items[0], kroger_upc: "0001",
+        current: { upc: "0001", description: "AP Flour", size: "5 lb", price: 3.49, stock_level: "HIGH" } }],
+    });
+    render(<MatchAndSend />);
+    fireEvent.click(await screen.findByRole("button", { name: /find product/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /choose/i }));
+    await waitFor(() =>
+      expect(confirm).toHaveBeenCalledWith(1, {
+        kroger_upc: "0001",
+        kroger_description: "AP Flour",
+        package_size: "5 lb",
+      }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
   it("sends the cart and shows the result", async () => {

@@ -47,7 +47,7 @@ def test_search_uses_settings_home_store(db_session):
     kroger.fetch_client_token.return_value = TokenResp(access_token="ct", expires_in=1800)
     kroger.search_products.return_value = [Product(upc="0001", description="Flour")]
     service.search_item_products(db_session, kroger, item.id, query=None)
-    kroger.search_products.assert_called_once_with("ct", "flour", "L1")
+    kroger.search_products.assert_called_once_with("ct", "flour", "L1", limit=24, start=0)
 
 
 def test_search_no_home_store_raises(db_session):

@@ -107,11 +107,24 @@ def test_search_item_products_uses_store_and_canonical_name(db_session):
     kroger = MagicMock()
     kroger.fetch_client_token.return_value = TokenResp(access_token="ct", expires_in=1800)
     kroger.search_products.return_value = [
-        Product(upc="0001", description="AP Flour", size="5 lb", price=3.49, stock_level="HIGH")
+        Product(upc="0001", description="AP Flour", size="5 lb", price=3.49,
+                stock_level="HIGH", brand="Gold Medal", image_url="img.jpg")
     ]
     choices = service.search_item_products(db_session, kroger, item.id, query=None)
     assert choices[0].upc == "0001"
-    kroger.search_products.assert_called_once_with("ct", "flour", "L1")
+    assert choices[0].brand == "Gold Medal"
+    assert choices[0].image_url == "img.jpg"
+    kroger.search_products.assert_called_once_with("ct", "flour", "L1", limit=24, start=0)
+
+
+def test_search_item_products_forwards_start_and_limit(db_session):
+    gl, ing, item = _draft_with_item(db_session)
+    settings_service.set_home_store(db_session, "L1", None)
+    kroger = MagicMock()
+    kroger.fetch_client_token.return_value = TokenResp(access_token="ct", expires_in=1800)
+    kroger.search_products.return_value = []
+    service.search_item_products(db_session, kroger, item.id, query="jif", start=24, limit=24)
+    kroger.search_products.assert_called_once_with("ct", "jif", "L1", limit=24, start=24)
 
 
 def test_search_item_products_no_store_raises(db_session):

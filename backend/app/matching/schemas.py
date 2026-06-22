@@ -11,6 +11,8 @@ class ProductChoice(BaseModel):
     size: str | None = None
     price: float | None = None
     stock_level: str | None = None
+    brand: str | None = None
+    image_url: str | None = None
 
 
 class MatchItemRead(BaseModel):
