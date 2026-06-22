@@ -67,3 +67,18 @@ class AddIngredientRequest(BaseModel):
         if not v.strip():
             raise ValueError("raw_text must not be blank")
         return v.strip()
+
+
+class ExtractIngredientsRequest(BaseModel):
+    text: str
+
+    @field_validator("text")
+    @classmethod
+    def _not_blank(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("text must not be blank")
+        return v.strip()
+
+
+class ExtractedIngredients(BaseModel):
+    lines: list[str]

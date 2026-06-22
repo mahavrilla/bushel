@@ -85,6 +85,11 @@ def create_from_manual(
     )
 
 
+def extract_ingredient_lines(text: str, llm: LLMClient) -> list[str]:
+    """Extract ingredient-only lines from pasted recipe text via the LLM."""
+    return llm.extract_ingredients(text)
+
+
 def add_ingredient(db: Session, recipe_id: int, raw_text: str, llm: LLMClient) -> Recipe:
     """Parse one raw line and append it to an existing recipe as a RecipeIngredient."""
     recipe = db.get(Recipe, recipe_id)

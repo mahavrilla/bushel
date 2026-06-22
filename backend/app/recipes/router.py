@@ -7,11 +7,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.llm.client import LLMClient
+from app.llm.client import LLMClient, LLMUnavailableError
 from app.models import Ingredient, Recipe, RecipeIngredient
 from app.recipes.scraper import ScrapeError
 from app.recipes.schemas import (
     AddIngredientRequest,
+    ExtractedIngredients,
+    ExtractIngredientsRequest,
     IngredientRead,
     IngredientUpdate,
     ImportRequest,
@@ -24,6 +26,7 @@ from app.recipes.service import (
     add_ingredient,
     create_from_manual,
     delete_recipe,
+    extract_ingredient_lines,
     import_from_url,
 )
 
@@ -83,6 +86,17 @@ def create_recipe(body: ManualRecipeRequest, db: Session = Depends(get_db), llm:
     )
     db.commit()
     return _serialize(recipe, db)
+
+
+@router.post("/extract-ingredients", response_model=ExtractedIngredients)
+def extract_ingredients_endpoint(
+    body: ExtractIngredientsRequest, llm: LLMClient = Depends(get_llm)
+):
+    try:
+        lines = extract_ingredient_lines(body.text, llm)
+    except LLMUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=f"Ingredient extraction unavailable: {exc}")
+    return ExtractedIngredients(lines=lines)
 
 
 @router.post("/{recipe_id}/ingredients", response_model=RecipeRead, status_code=201)

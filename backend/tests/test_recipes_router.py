@@ -161,6 +161,36 @@ def test_delete_ingredient_404_when_on_other_recipe(db_session):
     app.dependency_overrides.clear()
 
 
+def test_extract_ingredients_endpoint(db_session):
+    client = _client(db_session)
+    with patch("app.recipes.router.extract_ingredient_lines") as mock_extract:
+        mock_extract.return_value = ["ground turkey", "olive oil"]
+        resp = client.post(
+            "/recipes/extract-ingredients",
+            json={"text": "Ingredients\n- Ground turkey\n- Olive oil"},
+        )
+    assert resp.status_code == 200
+    assert resp.json()["lines"] == ["ground turkey", "olive oil"]
+    app.dependency_overrides.clear()
+
+
+def test_extract_ingredients_blank_is_422(db_session):
+    client = _client(db_session)
+    resp = client.post("/recipes/extract-ingredients", json={"text": "   "})
+    assert resp.status_code == 422
+    app.dependency_overrides.clear()
+
+
+def test_extract_ingredients_503_when_llm_unavailable(db_session):
+    from app.llm.client import LLMUnavailableError
+
+    client = _client(db_session)
+    with patch("app.recipes.router.extract_ingredient_lines", side_effect=LLMUnavailableError("no key")):
+        resp = client.post("/recipes/extract-ingredients", json={"text": "stuff"})
+    assert resp.status_code == 503
+    app.dependency_overrides.clear()
+
+
 def test_delete_recipe_on_list_recomputes_draft(db_session):
     recipe, ri, ing = _seed_recipe(db_session)
     draft = GroceryList(name="Draft", status="draft")
