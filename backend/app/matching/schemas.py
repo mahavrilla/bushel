@@ -28,11 +28,13 @@ class MatchItemRead(BaseModel):
 class MatchRead(BaseModel):
     connected: bool
     store_location_id: str | None
+    store_name: str | None = None
     items: list[MatchItemRead]
 
 
 class SetStoreRequest(BaseModel):
     location_id: str
+    name: str | None = None
 
 
 class ConfirmRequest(BaseModel):

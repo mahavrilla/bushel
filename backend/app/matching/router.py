@@ -31,7 +31,7 @@ def get_match(db: Session = Depends(get_db)):
 
 @router.post("/store", response_model=MatchRead)
 def set_store(body: SetStoreRequest, db: Session = Depends(get_db)):
-    state = service.set_store(db, body.location_id)
+    state = service.set_store(db, body.location_id, body.name)
     db.commit()
     return state
 

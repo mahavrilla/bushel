@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.consolidate.service import get_or_create_draft
 from app.kroger import auth as kroger_auth
+from app.settings import service as settings_service
 from app.kroger.client import KrogerAuthError, KrogerClient, KrogerError
 from app.matching.purchase import compute_purchase_qty
 from app.matching.schemas import (
@@ -94,18 +95,18 @@ def get_match_state(db: Session) -> MatchRead:
         )
         for it in _kept_items(db, draft.id)
     ]
+    loc, store_name = settings_service.get_home_store(db)
     return MatchRead(
         connected=kroger_auth.get_auth(db) is not None,
-        store_location_id=draft.store_location_id,
+        store_location_id=loc,
+        store_name=store_name,
         items=items,
     )
 
 
-def set_store(db: Session, location_id: str) -> MatchRead:
-    """Persist the chosen Kroger store on the active draft, then return refreshed match state."""
-    draft = get_or_create_draft(db)
-    draft.store_location_id = location_id
-    db.flush()
+def set_store(db: Session, location_id: str, name: str | None = None) -> MatchRead:
+    """Persist the chosen Kroger store as the user's home store, then return match state."""
+    settings_service.set_home_store(db, location_id, name)
     return get_match_state(db)
 
 
@@ -143,14 +144,14 @@ def search_item_products(
     db: Session, client: KrogerClient, item_id: int, query: str | None
 ) -> list[ProductChoice]:
     item = _get_item(db, item_id)
-    gl = db.get(GroceryList, item.list_id)
-    if gl is None or gl.store_location_id is None:
+    location_id, _name = settings_service.get_home_store(db)
+    if location_id is None:
         raise NoStoreSelectedError("pick a store before searching products")
 
     ingredient = db.get(Ingredient, item.ingredient_id)
     term = query or (ingredient.canonical_name if ingredient else "")
     token = client.fetch_client_token()
-    products = client.search_products(token.access_token, term, gl.store_location_id)
+    products = client.search_products(token.access_token, term, location_id)
     return [
         ProductChoice(
             upc=p.upc, description=p.description, size=p.size,

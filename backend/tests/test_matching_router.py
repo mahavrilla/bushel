@@ -8,6 +8,7 @@ from app.kroger.schemas import Product, TokenResp
 from app.kroger.router import get_kroger_client
 from app.main import app
 from app.models import GroceryList, GroceryListItem, Ingredient, KrogerAuth
+from app.settings import service as settings_service
 
 
 def _seed(db, store="L1", upc=None):
@@ -32,6 +33,7 @@ def _client(db, kroger=None):
 
 def test_get_match(db_session):
     _seed(db_session)
+    settings_service.set_home_store(db_session, "L1", None)
     client = _client(db_session)
     body = client.get("/list/match").json()
     assert body["store_location_id"] == "L1"
@@ -41,6 +43,7 @@ def test_get_match(db_session):
 
 def test_search_products_endpoint(db_session):
     gl, ing, it = _seed(db_session)
+    settings_service.set_home_store(db_session, "L1", None)
     kroger = MagicMock()
     kroger.fetch_client_token.return_value = TokenResp(access_token="ct", expires_in=1800)
     kroger.search_products.return_value = [Product(upc="0001", description="Flour", size="5 lb")]
@@ -95,6 +98,7 @@ def test_search_products_auth_error_is_502(db_session):
     from app.kroger.client import KrogerAuthError
 
     gl, ing, it = _seed(db_session)
+    settings_service.set_home_store(db_session, "L1", None)
     kroger = MagicMock()
     kroger.fetch_client_token.side_effect = KrogerAuthError("bad client credentials")
     client = _client(db_session, kroger)

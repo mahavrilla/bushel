@@ -11,6 +11,7 @@ from app.models import (
     Ingredient,
     IngredientProductMap,
 )
+from app.settings import service as settings_service
 
 
 def _draft_with_item(db, total_qty=3.0, total_unit="lb", store="L1"):
@@ -30,6 +31,7 @@ def _draft_with_item(db, total_qty=3.0, total_unit="lb", store="L1"):
 
 def test_get_match_state_reports_items_and_store(db_session):
     gl, ing, item = _draft_with_item(db_session)
+    settings_service.set_home_store(db_session, "L1", None)
     state = service.get_match_state(db_session)
     assert state.connected is False
     assert state.store_location_id == "L1"
@@ -101,6 +103,7 @@ def test_confirm_product_unknown_item_raises(db_session):
 
 def test_search_item_products_uses_store_and_canonical_name(db_session):
     gl, ing, item = _draft_with_item(db_session)
+    settings_service.set_home_store(db_session, "L1", None)
     kroger = MagicMock()
     kroger.fetch_client_token.return_value = TokenResp(access_token="ct", expires_in=1800)
     kroger.search_products.return_value = [
@@ -117,10 +120,10 @@ def test_search_item_products_no_store_raises(db_session):
         service.search_item_products(db_session, MagicMock(), item.id, query=None)
 
 
-def test_set_store_persists_on_draft(db_session):
+def test_set_store_persists_to_settings(db_session):
     gl, ing, item = _draft_with_item(db_session, store=None)
     state = service.set_store(db_session, "L99")
     assert state.store_location_id == "L99"
     db_session.flush()
-    from app.models import GroceryList
-    assert db_session.get(GroceryList, gl.id).store_location_id == "L99"
+    loc, _name = settings_service.get_home_store(db_session)
+    assert loc == "L99"
