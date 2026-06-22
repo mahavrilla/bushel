@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createIngredient, deleteRecipe, importRecipe, listRecipes, searchIngredients, updateIngredient } from "../api";
+import { addIngredient, createIngredient, deleteIngredient, deleteRecipe, importRecipe, listRecipes, searchIngredients, updateIngredient } from "../api";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -70,6 +70,28 @@ describe("recipe api", () => {
     expect(spy).toHaveBeenCalledWith(
       expect.stringContaining("/ingredients"),
       expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("addIngredient posts the raw line to the recipe", async () => {
+    const spy = vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ id: 1, title: "X", servings: 2, source_url: null, ingredients: [] }), { status: 201 }),
+    );
+    await addIngredient(1, "2 cloves garlic");
+    expect(spy).toHaveBeenCalledWith(
+      expect.stringContaining("/recipes/1/ingredients"),
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("deleteIngredient issues a DELETE for the row", async () => {
+    const spy = vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ id: 1, title: "X", servings: 2, source_url: null, ingredients: [] }), { status: 200 }),
+    );
+    await deleteIngredient(1, 10);
+    expect(spy).toHaveBeenCalledWith(
+      expect.stringContaining("/recipes/1/ingredients/10"),
+      expect.objectContaining({ method: "DELETE" }),
     );
   });
 });
