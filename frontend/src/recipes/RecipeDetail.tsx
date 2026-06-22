@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import { getRecipe, updateIngredient } from "../api";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
+import { ErrorBanner } from "../components/ui/ErrorBanner";
 import { Input } from "../components/ui/Input";
 import { PageHeader } from "../components/ui/PageHeader";
 import { Pill } from "../components/ui/Pill";
@@ -23,23 +24,35 @@ function Row({
   const [qty, setQty] = useState(ingredient.qty?.toString() ?? "");
   const [unit, setUnit] = useState(ingredient.unit ?? "");
   const [changing, setChanging] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function save() {
-    onSaved(
-      await updateIngredient(recipeId, ingredient.id, {
-        qty: qty === "" ? undefined : Number(qty),
-        unit: unit === "" ? undefined : unit,
-      }),
-    );
+    setError(null);
+    try {
+      onSaved(
+        await updateIngredient(recipeId, ingredient.id, {
+          qty: qty === "" ? undefined : Number(qty),
+          unit: unit === "" ? undefined : unit,
+        }),
+      );
+    } catch {
+      setError("Couldn't save — please try again.");
+    }
   }
 
   async function remap(ingredientId: number) {
-    onSaved(await updateIngredient(recipeId, ingredient.id, { ingredient_id: ingredientId }));
-    setChanging(false);
+    setError(null);
+    try {
+      onSaved(await updateIngredient(recipeId, ingredient.id, { ingredient_id: ingredientId }));
+      setChanging(false);
+    } catch {
+      setError("Couldn't update the match — please try again.");
+    }
   }
 
   return (
     <Card className={ingredient.needs_review ? "border-accent bg-tint-amber" : ""}>
+      {error && <ErrorBanner message={error} />}
       <div className="mb-2 flex items-center gap-2">
         <span className="font-medium text-heading">{ingredient.raw_text}</span>
         {ingredient.needs_review && <Pill tone="warning">Needs review</Pill>}
@@ -48,7 +61,12 @@ function Row({
       <div className="flex items-center gap-2 text-sm">
         <span className="text-muted">Matched to:</span>
         <strong className="text-heading">{ingredient.ingredient_name ?? "—"}</strong>
-        <Button variant="link" className="ml-auto" onClick={() => setChanging((c) => !c)}>
+        <Button
+          variant="link"
+          className="ml-auto"
+          aria-label={`Change match for ${ingredient.raw_text}`}
+          onClick={() => setChanging((c) => !c)}
+        >
           Change
         </Button>
       </div>
@@ -57,7 +75,7 @@ function Row({
       <div className="mt-2 flex flex-wrap items-end gap-3">
         <Input label="Amount" value={qty} onChange={(e) => setQty(e.target.value)} className="w-24" />
         <Input label="Unit" value={unit} onChange={(e) => setUnit(e.target.value)} className="w-28" />
-        <Button variant="secondary" onClick={save}>
+        <Button variant="secondary" aria-label={`Save ${ingredient.raw_text}`} onClick={save}>
           Save
         </Button>
       </div>
