@@ -45,6 +45,14 @@ def _membership(db: Session, list_id: int, recipe_id: int) -> GroceryListRecipe 
 
 def _recompute(db: Session, draft: GroceryList) -> None:
     """Delete the list's items and rebuild them from its recipe memberships."""
+    # Preserve per-ingredient user pantry decisions across the delete-and-rebuild.
+    prior = {
+        it.ingredient_id: (it.pantry_status, it.pantry_resolved)
+        for it in db.execute(
+            select(GroceryListItem).where(GroceryListItem.list_id == draft.id)
+        ).scalars().all()
+    }
+
     db.execute(delete(GroceryListItem).where(GroceryListItem.list_id == draft.id))
 
     memberships = db.execute(
@@ -71,6 +79,7 @@ def _recompute(db: Session, draft: GroceryList) -> None:
     for ingredient_id, data in grouped.items():
         quantities = consolidate(data["quantities"])
         single = quantities[0] if len(quantities) == 1 else None
+        status, resolved = prior.get(ingredient_id, ("needed", False))
         db.add(
             GroceryListItem(
                 list_id=draft.id,
@@ -79,7 +88,8 @@ def _recompute(db: Session, draft: GroceryList) -> None:
                 total_qty=single["qty"] if single else None,
                 total_unit=single["unit"] if single else None,
                 source_recipe_ids=sorted(data["recipes"]),
-                pantry_status="needed",
+                pantry_status=status,
+                pantry_resolved=resolved,
             )
         )
     db.flush()
