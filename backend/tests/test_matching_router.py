@@ -53,6 +53,18 @@ def test_search_products_endpoint(db_session):
     app.dependency_overrides.clear()
 
 
+def test_search_products_endpoint_passes_start_and_limit(db_session):
+    gl, ing, it = _seed(db_session)
+    settings_service.set_home_store(db_session, "L1", None)
+    kroger = MagicMock()
+    kroger.fetch_client_token.return_value = TokenResp(access_token="ct", expires_in=1800)
+    kroger.search_products.return_value = []
+    client = _client(db_session, kroger)
+    client.get(f"/list/items/{it.id}/products", params={"q": "jif", "start": 24, "limit": 24})
+    kroger.search_products.assert_called_once_with("ct", "jif", "L1", limit=24, start=24)
+    app.dependency_overrides.clear()
+
+
 def test_confirm_product_endpoint(db_session):
     gl, ing, it = _seed(db_session)
     client = _client(db_session)

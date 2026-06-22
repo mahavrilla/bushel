@@ -141,7 +141,8 @@ def confirm_product(db: Session, item_id: int, req: ConfirmRequest) -> None:
 
 
 def search_item_products(
-    db: Session, client: KrogerClient, item_id: int, query: str | None
+    db: Session, client: KrogerClient, item_id: int, query: str | None,
+    start: int = 0, limit: int = 24,
 ) -> list[ProductChoice]:
     item = _get_item(db, item_id)
     location_id, _name = settings_service.get_home_store(db)
@@ -151,11 +152,12 @@ def search_item_products(
     ingredient = db.get(Ingredient, item.ingredient_id)
     term = query or (ingredient.canonical_name if ingredient else "")
     token = client.fetch_client_token()
-    products = client.search_products(token.access_token, term, location_id)
+    products = client.search_products(token.access_token, term, location_id, limit=limit, start=start)
     return [
         ProductChoice(
             upc=p.upc, description=p.description, size=p.size,
             price=p.price, stock_level=p.stock_level,
+            brand=p.brand, image_url=p.image_url,
         )
         for p in products
     ]

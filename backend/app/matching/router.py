@@ -40,11 +40,13 @@ def set_store(body: SetStoreRequest, db: Session = Depends(get_db)):
 def search_products(
     item_id: int,
     q: str | None = Query(default=None),
+    start: int = Query(default=0),
+    limit: int = Query(default=24),
     db: Session = Depends(get_db),
     kroger: KrogerClient = Depends(get_kroger_client),
 ):
     try:
-        return service.search_item_products(db, kroger, item_id, query=q)
+        return service.search_item_products(db, kroger, item_id, query=q, start=start, limit=limit)
     except service.ItemNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     except service.NoStoreSelectedError as exc:
