@@ -104,3 +104,18 @@ export interface SendResult {
   status: string;
   results: SendItemResult[];
 }
+
+export interface PantryItem {
+  item_id: number;
+  ingredient_id: number;
+  ingredient_name: string | null;
+  pantry_status: string;
+  last_qty: number | null;
+  last_unit: string | null;
+  purchased_at: string | null;
+  days_ago: number | null;
+}
+
+export interface PantryView {
+  items: PantryItem[];
+}

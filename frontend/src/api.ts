@@ -1,4 +1,4 @@
-import type { ConfirmProductBody, GroceryListData, KrogerLocation, KrogerStatus, MatchData, ProductChoice, RecipeRead, RecipeSummary, SendResult } from "./recipes/types";
+import type { ConfirmProductBody, GroceryListData, KrogerLocation, KrogerStatus, MatchData, PantryView, ProductChoice, RecipeRead, RecipeSummary, SendResult } from "./recipes/types";
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
@@ -152,4 +152,17 @@ export async function sendCart(modality: string): Promise<SendResult> {
     body: JSON.stringify({ modality }),
   });
   return json<SendResult>(res);
+}
+
+export async function getPantry(): Promise<PantryView> {
+  return json<PantryView>(await fetch(`${BASE_URL}/list/pantry`));
+}
+
+export async function setPantryDecision(itemId: number, keep: boolean): Promise<PantryView> {
+  const res = await fetch(`${BASE_URL}/list/items/${itemId}/pantry`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ keep }),
+  });
+  return json<PantryView>(res);
 }
