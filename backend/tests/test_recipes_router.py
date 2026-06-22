@@ -132,6 +132,35 @@ def test_add_ingredient_blank_is_422(db_session):
     app.dependency_overrides.clear()
 
 
+def test_delete_ingredient_endpoint(db_session):
+    recipe, ri, ing = _seed_recipe(db_session)
+    client = _client(db_session)
+    resp = client.delete(f"/recipes/{recipe.id}/ingredients/{ri.id}")
+    assert resp.status_code == 200
+    assert resp.json()["ingredients"] == []
+    assert db_session.get(RecipeIngredient, ri.id) is None
+    app.dependency_overrides.clear()
+
+
+def test_delete_ingredient_404_when_missing(db_session):
+    recipe, ri, ing = _seed_recipe(db_session)
+    client = _client(db_session)
+    resp = client.delete(f"/recipes/{recipe.id}/ingredients/99999")
+    assert resp.status_code == 404
+    app.dependency_overrides.clear()
+
+
+def test_delete_ingredient_404_when_on_other_recipe(db_session):
+    recipe, ri, ing = _seed_recipe(db_session)
+    other = Recipe(title="Other", default_servings=1)
+    db_session.add(other)
+    db_session.flush()
+    client = _client(db_session)
+    resp = client.delete(f"/recipes/{other.id}/ingredients/{ri.id}")
+    assert resp.status_code == 404
+    app.dependency_overrides.clear()
+
+
 def test_delete_recipe_on_list_recomputes_draft(db_session):
     recipe, ri, ing = _seed_recipe(db_session)
     draft = GroceryList(name="Draft", status="draft")

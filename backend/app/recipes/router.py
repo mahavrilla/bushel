@@ -123,6 +123,17 @@ def delete_recipe_endpoint(recipe_id: int, db: Session = Depends(get_db)):
     db.commit()
 
 
+@router.delete("/{recipe_id}/ingredients/{ingredient_row_id}", response_model=RecipeRead)
+def delete_ingredient(recipe_id: int, ingredient_row_id: int, db: Session = Depends(get_db)):
+    row = db.get(RecipeIngredient, ingredient_row_id)
+    if row is None or row.recipe_id != recipe_id:
+        raise HTTPException(status_code=404, detail="Ingredient not found")
+    db.delete(row)
+    db.commit()
+    recipe = db.get(Recipe, recipe_id)
+    return _serialize(recipe, db)
+
+
 @router.patch("/{recipe_id}/ingredients/{ingredient_row_id}", response_model=RecipeRead)
 def update_ingredient(
     recipe_id: int, ingredient_row_id: int, body: IngredientUpdate, db: Session = Depends(get_db)
