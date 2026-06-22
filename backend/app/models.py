@@ -75,6 +75,7 @@ class GroceryList(Base):
     store_location_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    staples_seeded: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
 class GroceryListItem(Base):
@@ -136,3 +137,22 @@ class AppSettings(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     home_store_location_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
     home_store_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+
+class Staple(Base):
+    __tablename__ = "staples"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ingredient_id: Mapped[int] = mapped_column(
+        ForeignKey("ingredients.id", ondelete="CASCADE"), unique=True
+    )
+    auto_add: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+
+class GroceryListStaple(Base):
+    __tablename__ = "grocery_list_staples"
+    __table_args__ = (UniqueConstraint("list_id", "staple_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    list_id: Mapped[int] = mapped_column(ForeignKey("grocery_lists.id", ondelete="CASCADE"))
+    staple_id: Mapped[int] = mapped_column(ForeignKey("staples.id", ondelete="CASCADE"))

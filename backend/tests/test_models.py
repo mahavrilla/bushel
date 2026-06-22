@@ -125,3 +125,22 @@ def test_grocery_list_item_pantry_resolved_defaults_false(db_session):
     db_session.add(item)
     db_session.flush()
     assert item.pantry_resolved is False
+
+
+def test_staple_and_link_models(db_session):
+    from app.models import GroceryList, GroceryListStaple, Ingredient, Staple
+
+    ing = Ingredient(canonical_name="peanut butter", aliases=[], category="pantry")
+    db_session.add(ing)
+    db_session.flush()
+    staple = Staple(ingredient_id=ing.id)
+    db_session.add(staple)
+    db_session.flush()
+    assert staple.auto_add is True
+
+    gl = GroceryList(name="Draft", status="draft")
+    db_session.add(gl)
+    db_session.flush()
+    assert gl.staples_seeded is False
+    db_session.add(GroceryListStaple(list_id=gl.id, staple_id=staple.id))
+    db_session.flush()
