@@ -73,7 +73,7 @@ describe("RecipeList", () => {
     renderWithRouter(<RecipeList />);
     await screen.findByRole("link", { name: /pancakes/i });
     await userEvent.type(screen.getByRole("searchbox", { name: /search recipes/i }), "zzz");
-    expect(await screen.findByText(/no recipes match/i)).toBeInTheDocument();
+    expect(screen.getByText(/no recipes match/i)).toBeInTheDocument();
   });
 
   it("deletes a recipe after confirmation and refreshes", async () => {

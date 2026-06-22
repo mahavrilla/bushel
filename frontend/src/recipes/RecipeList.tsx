@@ -22,7 +22,9 @@ export function RecipeList() {
       .catch(() => setRecipes([]));
   }
 
-  useEffect(load, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   async function remove(r: RecipeSummary) {
     if (!window.confirm(`Delete ${r.title}? This also removes it from your grocery list.`)) return;
