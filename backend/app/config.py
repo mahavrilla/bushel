@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     kroger_redirect_uri: str = "http://localhost:8000/auth/callback"
     anthropic_api_key: str = ""
 
+    # Pantry "still have it?" — flag ingredients bought within this many days.
+    pantry_recent_days: int = 14
+
 
 @lru_cache
 def get_settings() -> Settings:

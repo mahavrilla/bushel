@@ -91,6 +91,7 @@ class GroceryListItem(Base):
     source_recipe_ids: Mapped[list[int]] = mapped_column(ARRAY(Integer), default=list)
     quantities: Mapped[list] = mapped_column(JSONB, default=list, server_default="[]")
     pantry_status: Mapped[str] = mapped_column(String(20), default="needed")
+    pantry_resolved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
 class PurchaseLog(Base):

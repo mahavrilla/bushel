@@ -110,3 +110,18 @@ def test_grocery_list_item_has_purchase_qty_estimated_default_false(db_session):
     db_session.add(item)
     db_session.flush()
     assert item.purchase_qty_estimated is False
+
+
+def test_grocery_list_item_pantry_resolved_defaults_false(db_session):
+    from app.models import GroceryList, GroceryListItem, Ingredient
+
+    ing = Ingredient(canonical_name="rice", aliases=[], category="pantry")
+    db_session.add(ing)
+    db_session.flush()
+    gl = GroceryList(name="Draft", status="draft")
+    db_session.add(gl)
+    db_session.flush()
+    item = GroceryListItem(list_id=gl.id, ingredient_id=ing.id)
+    db_session.add(item)
+    db_session.flush()
+    assert item.pantry_resolved is False
