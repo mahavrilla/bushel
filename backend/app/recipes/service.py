@@ -5,6 +5,7 @@ from __future__ import annotations
 from sqlalchemy.orm import Session
 
 from app.consolidate.service import recompute_draft
+from app.consolidate.units import normalize_unit
 from app.ingredients.canonicalize import canonicalize_names
 from app.ingredients.parser import parse_line
 from app.llm.client import LLMClient
@@ -55,7 +56,7 @@ def _build_recipe(
                 recipe_id=recipe.id,
                 raw_text=raw,
                 qty=p.qty,
-                unit=p.unit,
+                unit=normalize_unit(p.unit),
                 ingredient_id=result.ingredient_id,
                 parse_source="manual" if source_url is None and p.source == "library" else p.source,
                 needs_review=needs_review,
@@ -102,7 +103,7 @@ def add_ingredient(db: Session, recipe_id: int, raw_text: str, llm: LLMClient) -
             recipe_id=recipe.id,
             raw_text=raw_text,
             qty=parsed.qty,
-            unit=parsed.unit,
+            unit=normalize_unit(parsed.unit),
             ingredient_id=result.ingredient_id,
             # no source_url branch (cf. _build_recipe): an added line is always hand-typed
             parse_source="manual" if parsed.source == "library" else parsed.source,

@@ -191,6 +191,16 @@ def test_extract_ingredients_503_when_llm_unavailable(db_session):
     app.dependency_overrides.clear()
 
 
+def test_patch_ingredient_normalizes_unit(db_session):
+    recipe, ri, ing = _seed_recipe(db_session)
+    client = _client(db_session)
+    resp = client.patch(f"/recipes/{recipe.id}/ingredients/{ri.id}", json={"unit": "tbsp"})
+    assert resp.status_code == 200
+    db_session.refresh(ri)
+    assert ri.unit == "tablespoon"
+    app.dependency_overrides.clear()
+
+
 def test_delete_recipe_on_list_recomputes_draft(db_session):
     recipe, ri, ing = _seed_recipe(db_session)
     draft = GroceryList(name="Draft", status="draft")

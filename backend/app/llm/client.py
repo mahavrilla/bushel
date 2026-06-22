@@ -117,11 +117,13 @@ class LLMClient:
         result = self._parse(
             system=(
                 "You extract the ingredient list from pasted recipe text. Return only the "
-                "ingredients, one per entry in `lines`. Ignore the recipe title, section "
-                "headers (such as 'Ingredients' or 'Steps'), and any numbered or "
+                "ingredients, one per entry in `lines`. Keep the quantity and unit when "
+                "present (e.g. '2 tablespoons olive oil', '1 lb ground turkey'); for "
+                "ingredients with no amount, return just the name. Ignore the recipe title, "
+                "section headers (such as 'Ingredients' or 'Steps'), and any numbered or "
                 "instructional steps. If a single line lists multiple ingredients (e.g. "
                 "comma-separated), split it into one entry per ingredient. Drop preparation "
-                "notes (e.g. 'cut into wedges', 'chopped'). Keep each entry short."
+                "notes (e.g. 'cut into wedges', 'chopped')."
             ),
             user=text,
             output_format=ExtractedIngredientsLLM,

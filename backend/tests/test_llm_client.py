@@ -103,3 +103,13 @@ def test_extract_ingredients_returns_lines(mock_anthropic):
     assert result == ["ground turkey", "olive oil"]
     _, kwargs = mock_anthropic.return_value.messages.parse.call_args
     assert kwargs["model"] == "claude-haiku-4-5"
+
+
+@patch("app.llm.client.anthropic.Anthropic")
+def test_extract_ingredients_prompt_keeps_quantities(mock_anthropic):
+    mock_anthropic.return_value.messages.parse.return_value = MagicMock(
+        stop_reason="end_turn", parsed_output=ExtractedIngredientsLLM(lines=[])
+    )
+    LLMClient(api_key="sk-test").extract_ingredients("some recipe text")
+    _, kwargs = mock_anthropic.return_value.messages.parse.call_args
+    assert "quantity" in kwargs["system"].lower()

@@ -37,7 +37,7 @@ _ALIASES = {
 }
 
 
-def _normalize_unit(unit: str | None) -> str | None:
+def normalize_unit(unit: str | None) -> str | None:
     if unit is None:
         return None
     raw = unit.strip()
@@ -64,7 +64,7 @@ def consolidate(items: list[tuple[float | None, str | None]]) -> list[dict]:
         return None
 
     for qty, raw_unit in items:
-        unit = _normalize_unit(raw_unit)
+        unit = normalize_unit(raw_unit)
 
         if qty is None:
             key = ("none", unit)
@@ -108,8 +108,8 @@ def consolidate(items: list[tuple[float | None, str | None]]) -> list[dict]:
 def convert_qty(qty: float, from_unit: str | None, to_unit: str | None) -> float | None:
     """Convert qty from one unit to another. Returns None when units are missing,
     unparseable by pint, or dimensionally incompatible. Same normalized unit passes through."""
-    fu = _normalize_unit(from_unit)
-    tu = _normalize_unit(to_unit)
+    fu = normalize_unit(from_unit)
+    tu = normalize_unit(to_unit)
     if fu is None or tu is None:
         return None
     if fu == tu:

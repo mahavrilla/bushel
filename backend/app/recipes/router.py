@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.consolidate.units import normalize_unit
 from app.db import get_db
 from app.llm.client import LLMClient, LLMUnavailableError
 from app.models import Ingredient, Recipe, RecipeIngredient
@@ -158,7 +159,7 @@ def update_ingredient(
     if body.qty is not None:
         row.qty = body.qty
     if body.unit is not None:
-        row.unit = body.unit
+        row.unit = normalize_unit(body.unit)
     if body.ingredient_id is not None:
         row.ingredient_id = body.ingredient_id
     row.needs_review = False
