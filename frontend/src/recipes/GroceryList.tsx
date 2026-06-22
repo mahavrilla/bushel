@@ -9,6 +9,7 @@ import { Spinner } from "../components/ui/Spinner";
 import type { GroceryListData, ListRecipe, SubQuantity } from "./types";
 import { MatchAndSend } from "./MatchAndSend";
 import { PantryCheck } from "./PantryCheck";
+import { StaplesSection } from "./StaplesSection";
 
 function formatQuantities(quantities: SubQuantity[]): string {
   if (quantities.length === 0) return "";
@@ -64,8 +65,12 @@ function RecipeRow({
 export function GroceryList() {
   const [list, setList] = useState<GroceryListData | null>(null);
 
-  useEffect(() => {
+  function load() {
     getList().then(setList).catch(() => setList(null));
+  }
+
+  useEffect(() => {
+    load();
   }, []);
 
   if (list === null)
@@ -105,6 +110,7 @@ export function GroceryList() {
             </ul>
           </Card>
 
+          <StaplesSection onChange={load} />
           <PantryCheck />
           <MatchAndSend />
         </>
