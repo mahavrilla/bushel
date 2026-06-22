@@ -117,3 +117,41 @@ def test_add_ingredient_flags_low_confidence(mock_parse, db_session):
 def test_add_ingredient_missing_recipe_raises(db_session):
     with pytest.raises(RecipeNotFoundError):
         add_ingredient(db_session, 99999, "1 egg", llm=MagicMock())
+
+
+@patch("app.recipes.service.parse_line")
+def test_add_ingredient_normalizes_unit(mock_parse, db_session):
+    mock_parse.return_value = ParsedLine(2.0, "tbsp", "olive oil", "library")
+    oil = Ingredient(canonical_name="olive oil", aliases=[])
+    db_session.add(oil)
+    recipe = Recipe(title="T", default_servings=1)
+    db_session.add(recipe)
+    db_session.flush()
+
+    from app.ingredients.canonicalize import CanonResult
+
+    with patch("app.recipes.service.canonicalize_names") as mock_canon:
+        mock_canon.return_value = {"olive oil": CanonResult(oil.id, False)}
+        add_ingredient(db_session, recipe.id, "2 tbsp olive oil", llm=MagicMock())
+
+    row = db_session.query(RecipeIngredient).filter_by(recipe_id=recipe.id).one()
+    assert row.unit == "tablespoon"
+
+
+@patch("app.recipes.service.parse_line")
+def test_build_recipe_normalizes_unit(mock_parse, db_session):
+    mock_parse.return_value = ParsedLine(2.0, "tbsp", "olive oil", "library")
+    oil = Ingredient(canonical_name="olive oil", aliases=[])
+    db_session.add(oil)
+    db_session.flush()
+
+    from app.ingredients.canonicalize import CanonResult
+
+    with patch("app.recipes.service.canonicalize_names") as mock_canon:
+        mock_canon.return_value = {"olive oil": CanonResult(oil.id, False)}
+        recipe = create_from_manual(
+            title="T", servings=1, raw_lines=["2 tbsp olive oil"], db=db_session, llm=MagicMock()
+        )
+
+    row = db_session.query(RecipeIngredient).filter_by(recipe_id=recipe.id).one()
+    assert row.unit == "tablespoon"
