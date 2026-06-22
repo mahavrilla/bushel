@@ -128,3 +128,11 @@ class GroceryListRecipe(Base):
     list_id: Mapped[int] = mapped_column(ForeignKey("grocery_lists.id", ondelete="CASCADE"))
     recipe_id: Mapped[int] = mapped_column(ForeignKey("recipes.id", ondelete="CASCADE"))
     servings: Mapped[int] = mapped_column(Integer)
+
+
+class AppSettings(Base):
+    __tablename__ = "app_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    home_store_location_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    home_store_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
