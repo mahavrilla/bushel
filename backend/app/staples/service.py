@@ -82,6 +82,7 @@ def add_to_trip(db: Session, staple_id: int) -> None:
 
 
 def remove_from_trip(db: Session, staple_id: int) -> None:
+    _get_staple(db, staple_id)
     draft = get_or_create_draft(db)
     link = _link(db, draft.id, staple_id)
     if link is not None:

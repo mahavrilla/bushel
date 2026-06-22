@@ -67,7 +67,10 @@ def add_to_trip(staple_id: int, db: Session = Depends(get_db)):
 
 @router.delete("/list/staples/{staple_id}", response_model=StapleView)
 def remove_from_trip(staple_id: int, db: Session = Depends(get_db)):
-    service.remove_from_trip(db, staple_id)
+    try:
+        service.remove_from_trip(db, staple_id)
+    except service.StapleNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
     view = service.get_view(db)
     db.commit()
     return view

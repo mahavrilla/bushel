@@ -59,3 +59,9 @@ def test_add_remove_on_trip(db_session):
     assert next(x for x in body["staples"] if x["id"] == s.id)["on_trip"] is True
     assert client.delete(f"/list/staples/{s.id}").status_code == 200
     app.dependency_overrides.clear()
+
+
+def test_remove_from_trip_unknown_404(db_session):
+    client = _client(db_session)
+    assert client.delete("/list/staples/9999").status_code == 404
+    app.dependency_overrides.clear()
