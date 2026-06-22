@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import * as api from "../api";
+import { ApiError } from "../api";
 import { ProductPickerModal } from "./ProductPickerModal";
 import type { ProductChoice } from "./types";
 
@@ -90,5 +91,11 @@ describe("ProductPickerModal", () => {
     await screen.findByText("Jif");
     await userEvent.click(screen.getByRole("button", { name: /choose/i }));
     expect(onChoose).toHaveBeenCalledWith(expect.objectContaining({ upc: "1", description: "Jif" }));
+  });
+
+  it("shows a store-selection message when search returns 409", async () => {
+    vi.spyOn(api, "searchItemProducts").mockRejectedValue(new ApiError(409));
+    render(<ProductPickerModal itemId={5} ingredientName="pb" onChoose={vi.fn()} onClose={vi.fn()} />);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/pick a home store first/i);
   });
 });

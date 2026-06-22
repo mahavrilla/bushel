@@ -54,7 +54,7 @@ export function ProductPickerModal({
     } catch (err) {
       setError(
         err instanceof ApiError && err.status === 409
-          ? "Your Kroger session expired — reconnect on the Kroger tab, then try again."
+          ? "Pick a home store first (on the Kroger tab), then try again."
           : "Something went wrong searching products. Please try again.",
       );
     } finally {
