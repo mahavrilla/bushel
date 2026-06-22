@@ -31,6 +31,14 @@ describe("PantryCheck", () => {
     await waitFor(() => expect(decide).toHaveBeenCalledWith(1, false));
   });
 
+  it("keeps an item via 'Keep'", async () => {
+    vi.spyOn(api, "getPantry").mockResolvedValue(flagged);
+    const decide = vi.spyOn(api, "setPantryDecision").mockResolvedValue({ items: [] });
+    render(<PantryCheck />);
+    fireEvent.click(await screen.findByRole("button", { name: /^keep$/i }));
+    await waitFor(() => expect(decide).toHaveBeenCalledWith(1, true));
+  });
+
   it("renders nothing when no items are flagged", async () => {
     vi.spyOn(api, "getPantry").mockResolvedValue({
       items: [{ item_id: 1, ingredient_id: 2, ingredient_name: "rice", pantry_status: "needed",

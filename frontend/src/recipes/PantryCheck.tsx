@@ -3,18 +3,25 @@ import { useEffect, useState } from "react";
 import { getPantry, setPantryDecision } from "../api";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
+import { ErrorBanner } from "../components/ui/ErrorBanner";
 import { Pill } from "../components/ui/Pill";
 import type { PantryView } from "./types";
 
 export function PantryCheck() {
   const [view, setView] = useState<PantryView | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     getPantry().then(setView).catch(() => setView(null));
   }, []);
 
   async function decide(itemId: number, keep: boolean) {
-    setView(await setPantryDecision(itemId, keep));
+    setError(null);
+    try {
+      setView(await setPantryDecision(itemId, keep));
+    } catch {
+      setError("Couldn't save that — please try again.");
+    }
   }
 
   if (!view) return null;
@@ -29,6 +36,7 @@ export function PantryCheck() {
   return (
     <Card className="flex flex-col gap-3">
       <h3 className="text-lg font-semibold text-heading">Still have it?</h3>
+      {error && <ErrorBanner message={error} />}
       <ul className="flex flex-col gap-2">
         {flagged.map((i) => (
           <li key={i.item_id} className="flex flex-wrap items-center gap-2 rounded-xl bg-tint-amber px-3 py-2">
@@ -50,9 +58,9 @@ export function PantryCheck() {
             <span key={i.item_id}>
               {idx > 0 && ", "}
               {i.ingredient_name}
-              <button className="ml-1 text-primary underline" onClick={() => decide(i.item_id, true)}>
+              <Button variant="link" className="ml-1" onClick={() => decide(i.item_id, true)}>
                 undo
-              </button>
+              </Button>
             </span>
           ))}
         </div>
