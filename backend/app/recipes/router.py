@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -99,7 +99,6 @@ def delete_recipe_endpoint(recipe_id: int, db: Session = Depends(get_db)):
     except RecipeNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     db.commit()
-    return Response(status_code=204)
 
 
 @router.patch("/{recipe_id}/ingredients/{ingredient_row_id}", response_model=RecipeRead)

@@ -119,4 +119,7 @@ def test_delete_recipe_on_list_recomputes_draft(db_session):
         db_session.query(GroceryListItem).filter_by(list_id=draft.id).count()
     )
     assert remaining == 0
+    assert (
+        db_session.query(GroceryListRecipe).filter_by(recipe_id=recipe.id).count() == 0
+    )
     app.dependency_overrides.clear()

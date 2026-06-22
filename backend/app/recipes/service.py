@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.consolidate.service import recompute_draft
 from app.ingredients.canonicalize import canonicalize_names
 from app.ingredients.parser import parse_line
 from app.llm.client import LLMClient
-from app.models import GroceryList, Recipe, RecipeIngredient
+from app.models import Recipe, RecipeIngredient
 from app.recipes.scraper import scrape_url
 
 _LOW_CONFIDENCE_SOURCE = "library_low_confidence"
@@ -27,11 +26,7 @@ def delete_recipe(db: Session, recipe_id: int) -> None:
         raise RecipeNotFoundError(f"recipe {recipe_id} not found")
     db.delete(recipe)
     db.flush()  # FK ON DELETE CASCADE clears recipe_ingredients + grocery_list_recipes
-    draft = db.execute(
-        select(GroceryList).where(GroceryList.status == "draft").order_by(GroceryList.id.desc())
-    ).scalars().first()
-    if draft is not None:
-        recompute_draft(db)
+    recompute_draft(db)
 
 
 def _build_recipe(
