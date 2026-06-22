@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 
 import { createIngredient, searchIngredients } from "../api";
 import { Button } from "../components/ui/Button";
+import { ErrorBanner } from "../components/ui/ErrorBanner";
 import { Input } from "../components/ui/Input";
 import type { IngredientOption } from "./types";
 
 export function IngredientPicker({ onPick }: { onPick: (ingredientId: number) => void }) {
   const [query, setQuery] = useState("");
   const [options, setOptions] = useState<IngredientOption[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const q = query.trim();
@@ -25,8 +27,13 @@ export function IngredientPicker({ onPick }: { onPick: (ingredientId: number) =>
   }, [query]);
 
   async function create() {
-    const opt = await createIngredient(query.trim());
-    onPick(opt.id);
+    setError(null);
+    try {
+      const opt = await createIngredient(query.trim());
+      onPick(opt.id);
+    } catch {
+      setError("Couldn't create ingredient — please try again.");
+    }
   }
 
   const trimmed = query.trim();
@@ -40,7 +47,8 @@ export function IngredientPicker({ onPick }: { onPick: (ingredientId: number) =>
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
-      <ul className="flex flex-col">
+      {error && <ErrorBanner message={error} />}
+      <ul className="flex flex-col" aria-label="Ingredient options">
         {options.map((o) => (
           <li key={o.id}>
             <Button variant="link" onClick={() => onPick(o.id)}>

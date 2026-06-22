@@ -40,4 +40,20 @@ describe("IngredientPicker", () => {
       expect.objectContaining({ method: "POST" }),
     );
   });
+
+  it("shows an error when creating fails", async () => {
+    vi.spyOn(global, "fetch").mockImplementation((_url, init) =>
+      Promise.resolve(
+        init?.method === "POST"
+          ? new Response("nope", { status: 422 })
+          : new Response("[]", { status: 200 }),
+      ),
+    );
+    const onPick = vi.fn();
+    render(<IngredientPicker onPick={onPick} />);
+    await userEvent.type(screen.getByRole("searchbox", { name: /find ingredient/i }), "Fresh Basil");
+    await userEvent.click(await screen.findByRole("button", { name: /create "fresh basil"/i }));
+    expect(await screen.findByText(/couldn't create ingredient/i)).toBeInTheDocument();
+    expect(onPick).not.toHaveBeenCalled();
+  });
 });
