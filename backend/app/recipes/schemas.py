@@ -56,3 +56,14 @@ class RecipeSummary(BaseModel):
     id: int
     title: str
     servings: int
+
+
+class AddIngredientRequest(BaseModel):
+    raw_text: str
+
+    @field_validator("raw_text")
+    @classmethod
+    def _not_blank(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("raw_text must not be blank")
+        return v.strip()

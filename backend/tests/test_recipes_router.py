@@ -102,6 +102,36 @@ def test_delete_recipe_404_when_missing(db_session):
     app.dependency_overrides.clear()
 
 
+def test_add_ingredient_endpoint(db_session):
+    recipe, ri, ing = _seed_recipe(db_session)
+    client = _client(db_session)
+    with patch("app.recipes.router.add_ingredient") as mock_add:
+        mock_add.return_value = recipe
+        resp = client.post(f"/recipes/{recipe.id}/ingredients", json={"raw_text": "2 cups flour"})
+    assert resp.status_code == 201
+    assert resp.json()["id"] == recipe.id
+    mock_add.assert_called_once()
+    app.dependency_overrides.clear()
+
+
+def test_add_ingredient_404_when_recipe_missing(db_session):
+    from app.recipes.service import RecipeNotFoundError
+
+    client = _client(db_session)
+    with patch("app.recipes.router.add_ingredient", side_effect=RecipeNotFoundError("nope")):
+        resp = client.post("/recipes/99999/ingredients", json={"raw_text": "1 egg"})
+    assert resp.status_code == 404
+    app.dependency_overrides.clear()
+
+
+def test_add_ingredient_blank_is_422(db_session):
+    recipe, ri, ing = _seed_recipe(db_session)
+    client = _client(db_session)
+    resp = client.post(f"/recipes/{recipe.id}/ingredients", json={"raw_text": "   "})
+    assert resp.status_code == 422
+    app.dependency_overrides.clear()
+
+
 def test_delete_recipe_on_list_recomputes_draft(db_session):
     recipe, ri, ing = _seed_recipe(db_session)
     draft = GroceryList(name="Draft", status="draft")
