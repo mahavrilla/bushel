@@ -18,7 +18,12 @@ from app.recipes.schemas import (
     RecipeRead,
     RecipeSummary,
 )
-from app.recipes.service import create_from_manual, import_from_url
+from app.recipes.service import (
+    RecipeNotFoundError,
+    create_from_manual,
+    delete_recipe,
+    import_from_url,
+)
 
 router = APIRouter(prefix="/recipes", tags=["recipes"])
 
@@ -90,6 +95,15 @@ def get_recipe(recipe_id: int, db: Session = Depends(get_db)):
     if recipe is None:
         raise HTTPException(status_code=404, detail="Recipe not found")
     return _serialize(recipe, db)
+
+
+@router.delete("/{recipe_id}", status_code=204)
+def delete_recipe_endpoint(recipe_id: int, db: Session = Depends(get_db)):
+    try:
+        delete_recipe(db, recipe_id)
+    except RecipeNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    db.commit()
 
 
 @router.patch("/{recipe_id}/ingredients/{ingredient_row_id}", response_model=RecipeRead)

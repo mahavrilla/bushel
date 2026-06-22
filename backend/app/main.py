@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.consolidate.router import router as list_router
+from app.ingredients.router import router as ingredients_router
 from app.kroger.router import router as kroger_router
 from app.matching.router import router as matching_router
 from app.pantry.router import router as pantry_router
@@ -29,4 +30,5 @@ app.include_router(list_router)
 app.include_router(kroger_router)
 app.include_router(matching_router)
 app.include_router(pantry_router)
+app.include_router(ingredients_router)
 app.include_router(staples_router)

@@ -23,6 +23,11 @@ export interface RecipeSummary {
   servings: number;
 }
 
+export interface IngredientOption {
+  id: number;
+  canonical_name: string;
+}
+
 export interface SubQuantity {
   qty: number | null;
   unit: string | null;

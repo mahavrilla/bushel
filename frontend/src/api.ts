@@ -1,4 +1,4 @@
-import type { ConfirmProductBody, GroceryListData, KrogerLocation, KrogerStatus, MatchData, PantryView, ProductChoice, RecipeRead, RecipeSummary, SendResult, StapleView } from "./recipes/types";
+import type { ConfirmProductBody, GroceryListData, IngredientOption, KrogerLocation, KrogerStatus, MatchData, PantryView, ProductChoice, RecipeRead, RecipeSummary, SendResult, StapleView } from "./recipes/types";
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
@@ -62,6 +62,26 @@ export async function updateIngredient(
     body: JSON.stringify(patch),
   });
   return json<RecipeRead>(res);
+}
+
+export async function deleteRecipe(id: number): Promise<void> {
+  const res = await fetch(`${BASE_URL}/recipes/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new ApiError(res.status);
+}
+
+export async function searchIngredients(q: string): Promise<IngredientOption[]> {
+  return json<IngredientOption[]>(
+    await fetch(`${BASE_URL}/ingredients?q=${encodeURIComponent(q)}`),
+  );
+}
+
+export async function createIngredient(name: string): Promise<IngredientOption> {
+  const res = await fetch(`${BASE_URL}/ingredients`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  return json<IngredientOption>(res);
 }
 
 export async function getList(): Promise<GroceryListData> {

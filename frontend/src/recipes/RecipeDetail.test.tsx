@@ -47,7 +47,25 @@ describe("RecipeDetail", () => {
     vi.spyOn(api, "getRecipe").mockResolvedValue(recipe);
     const update = vi.spyOn(api, "updateIngredient").mockResolvedValue(recipe);
     renderWithRouter(<RecipeDetail />, { path: "/recipes/:id", initialEntries: ["/recipes/1"] });
-    await userEvent.click(await screen.findByRole("button", { name: /save 2 cups flour/i }));
+    await userEvent.click(await screen.findByRole("button", { name: /save/i }));
     await waitFor(() => expect(update).toHaveBeenCalledWith(1, 10, { qty: 2, unit: "cup" }));
+  });
+
+  it("shows the intro and labelled fields", async () => {
+    vi.spyOn(api, "getRecipe").mockResolvedValue(recipe);
+    renderWithRouter(<RecipeDetail />, { path: "/recipes/:id", initialEntries: ["/recipes/1"] });
+    expect(await screen.findByText("Matched to:")).toBeInTheDocument();
+    expect(screen.getByText(/each line from your recipe/i)).toBeInTheDocument();
+  });
+
+  it("re-maps the ingredient via the picker", async () => {
+    vi.spyOn(api, "getRecipe").mockResolvedValue(recipe);
+    vi.spyOn(api, "searchIngredients").mockResolvedValue([{ id: 8, canonical_name: "garlic powder" }]);
+    const update = vi.spyOn(api, "updateIngredient").mockResolvedValue(recipe);
+    renderWithRouter(<RecipeDetail />, { path: "/recipes/:id", initialEntries: ["/recipes/1"] });
+    await userEvent.click(await screen.findByRole("button", { name: /change/i }));
+    await userEvent.type(screen.getByRole("searchbox", { name: /find ingredient/i }), "gar");
+    await userEvent.click(await screen.findByRole("button", { name: "garlic powder" }));
+    await waitFor(() => expect(update).toHaveBeenCalledWith(1, 10, { ingredient_id: 8 }));
   });
 });
