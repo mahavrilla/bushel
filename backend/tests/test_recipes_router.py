@@ -235,6 +235,16 @@ def test_import_photo_requires_a_file(db_session):
     app.dependency_overrides.clear()
 
 
+def test_import_photo_rejects_more_than_five(db_session):
+    client = _client(db_session)
+    resp = client.post(
+        "/recipes/import-photo",
+        files=[("files", (f"p{i}.png", b"x", "image/png")) for i in range(6)],
+    )
+    assert resp.status_code == 422
+    app.dependency_overrides.clear()
+
+
 def test_import_photo_503_when_llm_unavailable(db_session):
     from app.llm.client import LLMUnavailableError
 
