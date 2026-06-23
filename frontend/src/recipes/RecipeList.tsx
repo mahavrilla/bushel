@@ -48,6 +48,7 @@ function AddToListButton({
       variant="secondary"
       className="ml-auto"
       aria-label={`Add ${title} to list`}
+      loading={state === "adding"}
       disabled={state !== "idle"}
       onClick={add}
     >
