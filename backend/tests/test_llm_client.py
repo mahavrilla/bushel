@@ -113,3 +113,30 @@ def test_extract_ingredients_prompt_keeps_quantities(mock_anthropic):
     LLMClient(api_key="sk-test").extract_ingredients("some recipe text")
     _, kwargs = mock_anthropic.return_value.messages.parse.call_args
     assert "quantity" in kwargs["system"].lower()
+
+
+@patch("app.llm.client.anthropic.Anthropic")
+def test_scrape_recipe_from_images_builds_image_blocks(mock_anthropic):
+    import base64
+
+    expected = ScrapedRecipeLLM(title="Card", servings=2, raw_lines=["1 egg"])
+    mock_anthropic.return_value.messages.parse.return_value = MagicMock(
+        stop_reason="end_turn", parsed_output=expected
+    )
+    client = LLMClient(api_key="sk-test")
+
+    result = client.scrape_recipe_from_images(
+        [(b"\x89PNG-bytes", "image/png"), (b"jpgbytes", "image/jpeg")]
+    )
+
+    assert result.title == "Card"
+    _, kwargs = mock_anthropic.return_value.messages.parse.call_args
+    content = kwargs["messages"][0]["content"]
+    image_blocks = [b for b in content if b["type"] == "image"]
+    assert len(image_blocks) == 2
+    assert image_blocks[0]["source"]["type"] == "base64"
+    assert image_blocks[0]["source"]["media_type"] == "image/png"
+    assert image_blocks[0]["source"]["data"] == base64.standard_b64encode(b"\x89PNG-bytes").decode("ascii")
+    assert image_blocks[1]["source"]["media_type"] == "image/jpeg"
+    assert any(b["type"] == "text" for b in content)
+    assert kwargs["model"] == "claude-haiku-4-5"
