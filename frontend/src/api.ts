@@ -40,6 +40,16 @@ export async function importRecipe(url: string): Promise<RecipeRead> {
   return json<RecipeRead>(res);
 }
 
+export async function importPhotoRecipe(files: File[]): Promise<RecipeRead> {
+  const form = new FormData();
+  for (const file of files) form.append("files", file);
+  const res = await fetch(`${BASE_URL}/recipes/import-photo`, {
+    method: "POST",
+    body: form,
+  });
+  return json<RecipeRead>(res);
+}
+
 export async function createRecipe(
   title: string,
   servings: number,
