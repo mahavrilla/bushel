@@ -7,9 +7,11 @@ import { Card } from "../components/ui/Card";
 import { ErrorBanner } from "../components/ui/ErrorBanner";
 import { Input } from "../components/ui/Input";
 import { PageHeader } from "../components/ui/PageHeader";
+import { SegmentedControl } from "../components/ui/SegmentedControl";
 
 export function AddRecipe() {
   const navigate = useNavigate();
+  const [mode, setMode] = useState<"url" | "manual">("url");
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [servings, setServings] = useState(1);
@@ -46,60 +48,70 @@ export function AddRecipe() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title="Add recipe" />
+      <SegmentedControl
+        options={[
+          { value: "url", label: "URL" },
+          { value: "manual", label: "Manual" },
+        ]}
+        value={mode}
+        onChange={setMode}
+      />
       {error && <ErrorBanner message={error} />}
 
-      <Card className="flex flex-col gap-3">
-        <h3 className="text-lg font-semibold text-heading">Import by URL</h3>
-        <Input label="Recipe URL" value={url} onChange={(e) => setUrl(e.target.value)} />
-        <Button disabled={!url} loading={busy} className="self-start" onClick={() => run(() => importRecipe(url))}>
-          Import
-        </Button>
-      </Card>
-
-      <Card className="flex flex-col gap-3">
-        <h3 className="text-lg font-semibold text-heading">Or enter manually</h3>
-        <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
-        <Input
-          label="Servings"
-          type="number"
-          value={servings}
-          onChange={(e) => setServings(Number(e.target.value))}
-        />
-        <div className="flex flex-col gap-1 text-sm">
-          <label htmlFor="ingredients" className="font-medium text-heading">
-            Ingredients
-          </label>
-          <p id="ingredients-hint" className="text-xs text-muted">
-            Paste a full recipe and click Extract, or enter one ingredient per line.
-          </p>
-          <textarea
-            id="ingredients"
-            aria-describedby="ingredients-hint"
-            className="min-h-24 rounded-xl border border-line bg-surface px-3 py-2 text-ink outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-            value={lines}
-            onChange={(e) => setLines(e.target.value)}
+      {mode === "url" ? (
+        <Card className="flex flex-col gap-3">
+          <h3 className="text-lg font-semibold text-heading">Import by URL</h3>
+          <Input label="Recipe URL" value={url} onChange={(e) => setUrl(e.target.value)} />
+          <Button disabled={!url} loading={busy} className="self-start" onClick={() => run(() => importRecipe(url))}>
+            Import
+          </Button>
+        </Card>
+      ) : (
+        <Card className="flex flex-col gap-3">
+          <h3 className="text-lg font-semibold text-heading">Enter manually</h3>
+          <Input label="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
+          <Input
+            label="Servings"
+            type="number"
+            value={servings}
+            onChange={(e) => setServings(Number(e.target.value))}
           />
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            disabled={!lines.trim()}
-            loading={busy}
-            className="self-start"
-            onClick={extract}
-          >
-            Extract ingredients
-          </Button>
-          <Button
-            disabled={!title.trim() || !lines.trim()}
-            loading={busy}
-            className="self-start"
-            onClick={() => run(() => createRecipe(title, servings, lines.split("\n")))}
-          >
-            Save recipe
-          </Button>
-        </div>
-      </Card>
+          <div className="flex flex-col gap-1 text-sm">
+            <label htmlFor="ingredients" className="font-medium text-heading">
+              Ingredients
+            </label>
+            <p id="ingredients-hint" className="text-xs text-muted">
+              Paste a full recipe and click Extract, or enter one ingredient per line.
+            </p>
+            <textarea
+              id="ingredients"
+              aria-describedby="ingredients-hint"
+              className="min-h-24 rounded-xl border border-line bg-surface px-3 py-2 text-ink outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              value={lines}
+              onChange={(e) => setLines(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              disabled={!lines.trim()}
+              loading={busy}
+              className="self-start"
+              onClick={extract}
+            >
+              Extract ingredients
+            </Button>
+            <Button
+              disabled={!title.trim() || !lines.trim()}
+              loading={busy}
+              className="self-start"
+              onClick={() => run(() => createRecipe(title, servings, lines.split("\n")))}
+            >
+              Save recipe
+            </Button>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
