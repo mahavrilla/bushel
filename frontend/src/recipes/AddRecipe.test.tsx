@@ -1,12 +1,17 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 import * as api from "../api";
 import { AddRecipe } from "./AddRecipe";
 
 afterEach(() => vi.restoreAllMocks());
+
+beforeAll(() => {
+  Object.defineProperty(URL, "createObjectURL", { value: vi.fn(() => "blob:mock"), writable: true });
+  Object.defineProperty(URL, "revokeObjectURL", { value: vi.fn(), writable: true });
+});
 
 function renderAddRecipe() {
   return render(
@@ -77,5 +82,38 @@ describe("AddRecipe", () => {
     await userEvent.click(screen.getByRole("tab", { name: /manual/i }));
     expect(screen.getByLabelText(/^title$/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/recipe url/i)).not.toBeInTheDocument();
+  });
+
+  it("shows photo mode without the url or title fields", async () => {
+    renderAddRecipe();
+    await userEvent.click(screen.getByRole("tab", { name: /photo/i }));
+    expect(screen.getByLabelText(/add recipe photos/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/recipe url/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^title$/i)).not.toBeInTheDocument();
+  });
+
+  it("creates a recipe from photos and navigates to it", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({ id: 21, title: "Card", servings: 2, source_url: null, ingredients: [] }),
+        { status: 201 },
+      ),
+    );
+    renderAddRecipe();
+    await userEvent.click(screen.getByRole("tab", { name: /photo/i }));
+    const file = new File(["bytes"], "card.png", { type: "image/png" });
+    await userEvent.upload(screen.getByLabelText(/add recipe photos/i), file);
+    await userEvent.click(screen.getByRole("button", { name: /create from photos/i }));
+    expect(await screen.findByText(/detail screen/i)).toBeInTheDocument();
+  });
+
+  it("shows an error when photo import fails", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response("nope", { status: 422 }));
+    renderAddRecipe();
+    await userEvent.click(screen.getByRole("tab", { name: /photo/i }));
+    const file = new File(["bytes"], "card.png", { type: "image/png" });
+    await userEvent.upload(screen.getByLabelText(/add recipe photos/i), file);
+    await userEvent.click(screen.getByRole("button", { name: /create from photos/i }));
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
   });
 });

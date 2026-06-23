@@ -25,6 +25,10 @@ class RecipeNotFoundError(Exception):
     """Raised when deleting a recipe that does not exist."""
 
 
+class NoRecipeFoundError(Exception):
+    """Raised when no ingredients could be read from the photos."""
+
+
 def delete_recipe(db: Session, recipe_id: int) -> None:
     """Delete a recipe (cascading its ingredient rows + list membership) and
     rebuild the active draft so its consolidated items drop off."""
@@ -72,6 +76,23 @@ def import_from_url(url: str, *, db: Session, llm: LLMClient) -> Recipe:
         title=scraped.title,
         servings=scraped.servings or 1,
         source_url=url,
+        raw_lines=scraped.raw_lines,
+        db=db,
+        llm=llm,
+    )
+
+
+def import_from_images(
+    images: list[tuple[bytes, str]], *, db: Session, llm: LLMClient
+) -> Recipe:
+    """Read a recipe from photo bytes and build it through the standard pipeline."""
+    scraped = llm.scrape_recipe_from_images(images)
+    if not scraped.raw_lines:
+        raise NoRecipeFoundError("no ingredients found in the photos")
+    return _build_recipe(
+        title=scraped.title,
+        servings=scraped.servings or 1,
+        source_url=None,
         raw_lines=scraped.raw_lines,
         db=db,
         llm=llm,

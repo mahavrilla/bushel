@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import anthropic
 from pydantic import BaseModel
 from typing import TypeVar
@@ -63,14 +64,17 @@ class LLMClient:
             self._client = anthropic.Anthropic(api_key=self._api_key)
         return self._client
 
-    def _parse(self, *, system: str, user: str, output_format: type[_T], max_tokens: int) -> _T:
+    def _invoke(
+        self, *, system: str, content: str | list[dict], output_format: type[_T], max_tokens: int
+    ) -> _T:
+        """Send one user message (string or content-block list) and return parsed output."""
         client = self._ensure()
         try:
             resp = client.messages.parse(
                 model=MODEL,
                 max_tokens=max_tokens,
                 system=system,
-                messages=[{"role": "user", "content": user}],
+                messages=[{"role": "user", "content": content}],
                 output_format=output_format,
             )
         except anthropic.APIError as exc:
@@ -78,6 +82,11 @@ class LLMClient:
         if resp.stop_reason == "refusal" or resp.parsed_output is None:
             raise LLMUnavailableError("LLM refused or returned no structured output")
         return resp.parsed_output
+
+    def _parse(self, *, system: str, user: str, output_format: type[_T], max_tokens: int) -> _T:
+        return self._invoke(
+            system=system, content=user, output_format=output_format, max_tokens=max_tokens
+        )
 
     def parse_ingredient_line(self, raw_text: str) -> ParsedLineLLM:
         return self._parse(
@@ -139,6 +148,41 @@ class LLMClient:
                 "one string per ingredient. Ignore instructions, ads, and comments."
             ),
             user=f"URL: {url}\n\nHTML:\n{html[:60000]}",
+            output_format=ScrapedRecipeLLM,
+            max_tokens=4096,
+        )
+
+    def scrape_recipe_from_images(self, images: list[tuple[bytes, str]]) -> ScrapedRecipeLLM:
+        """Read a recipe from one or more photos. Each tuple is (raw_bytes, media_type)."""
+        content: list[dict] = [
+            {
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": media_type,
+                    "data": base64.standard_b64encode(data).decode("ascii"),
+                },
+            }
+            for data, media_type in images
+        ]
+        content.append(
+            {
+                "type": "text",
+                "text": (
+                    "Read the recipe from the attached photo(s). Return the title, the number "
+                    "of servings (integer, or null), and raw_lines: the ingredient lines "
+                    "exactly as written, one string per ingredient. If several photos are "
+                    "attached, treat them as one recipe. Ignore instructions, steps, and page "
+                    "furniture."
+                ),
+            }
+        )
+        return self._invoke(
+            system=(
+                "You extract a recipe from photos of a recipe — a cookbook page, a handwritten "
+                "card, or a screenshot."
+            ),
+            content=content,
             output_format=ScrapedRecipeLLM,
             max_tokens=4096,
         )
