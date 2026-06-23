@@ -64,7 +64,9 @@ class LLMClient:
             self._client = anthropic.Anthropic(api_key=self._api_key)
         return self._client
 
-    def _invoke(self, *, system: str, content, output_format: type[_T], max_tokens: int) -> _T:
+    def _invoke(
+        self, *, system: str, content: str | list[dict], output_format: type[_T], max_tokens: int
+    ) -> _T:
         """Send one user message (string or content-block list) and return parsed output."""
         client = self._ensure()
         try:
