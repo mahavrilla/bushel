@@ -1,11 +1,14 @@
-import { screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { renderWithRouter } from "../test/renderWithRouter";
 import { RecipeList } from "./RecipeList";
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
 
 describe("RecipeList", () => {
   it("links each recipe to its detail route", async () => {
@@ -94,6 +97,37 @@ describe("RecipeList", () => {
       ),
     );
     expect(await screen.findByText(/no recipes yet/i)).toBeInTheDocument();
+  });
+
+  it("confirms inline after adding to the list, then resets", async () => {
+    vi.spyOn(global, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([{ id: 1, title: "Pancakes", servings: 4 }]), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: 1, status: "draft", recipes: [], items: [] }), { status: 200 }),
+      );
+    renderWithRouter(<RecipeList />);
+    const btn = await screen.findByRole("button", { name: /add pancakes to list/i });
+    await userEvent.click(btn);
+    expect(await screen.findByText("Added ✓")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /add pancakes to list/i })).toBeDisabled();
+    // wait for the 1500ms reset timer
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 1600));
+    });
+    expect(screen.getByText("Add to list")).toBeInTheDocument();
+  });
+
+  it("surfaces an error when adding to the list fails", async () => {
+    vi.spyOn(global, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([{ id: 1, title: "Pancakes", servings: 4 }]), { status: 200 }),
+      )
+      .mockResolvedValueOnce(new Response("nope", { status: 500 }));
+    renderWithRouter(<RecipeList />);
+    await userEvent.click(await screen.findByRole("button", { name: /add pancakes to list/i }));
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
   });
 
   it("does not delete when confirmation is cancelled", async () => {

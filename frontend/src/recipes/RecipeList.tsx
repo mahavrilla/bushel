@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { addRecipeToList, deleteRecipe, listRecipes } from "../api";
@@ -9,7 +9,52 @@ import { ErrorBanner } from "../components/ui/ErrorBanner";
 import { Input } from "../components/ui/Input";
 import { PageHeader } from "../components/ui/PageHeader";
 import { Spinner } from "../components/ui/Spinner";
+import { TrashIcon } from "../components/ui/icons";
 import type { RecipeSummary } from "./types";
+
+function AddToListButton({
+  recipeId,
+  title,
+  onError,
+}: {
+  recipeId: number;
+  title: string;
+  onError: (message: string) => void;
+}) {
+  const [state, setState] = useState<"idle" | "adding" | "added">("idle");
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
+
+  async function add() {
+    setState("adding");
+    try {
+      await addRecipeToList(recipeId);
+      setState("added");
+      timer.current = setTimeout(() => setState("idle"), 1500);
+    } catch {
+      onError(`Could not add ${title} to your list. Please try again.`);
+      setState("idle");
+    }
+  }
+
+  return (
+    <Button
+      variant="secondary"
+      className="ml-auto"
+      aria-label={`Add ${title} to list`}
+      disabled={state !== "idle"}
+      onClick={add}
+    >
+      {state === "added" ? "Added ✓" : "Add to list"}
+    </Button>
+  );
+}
 
 export function RecipeList() {
   const [recipes, setRecipes] = useState<RecipeSummary[] | null>(null);
@@ -61,7 +106,7 @@ export function RecipeList() {
         <EmptyState icon="📖" message="No recipes yet. Add one to get started." />
       ) : (
         <>
-          <div className="mb-4">
+          <div className="sticky top-0 z-10 bg-canvas pb-3 pt-1">
             <Input
               type="search"
               label="Search recipes"
@@ -81,20 +126,9 @@ export function RecipeList() {
                       {r.title}
                     </Link>
                     <span className="text-sm text-muted">{r.servings} servings</span>
-                    <Button
-                      variant="secondary"
-                      className="ml-auto"
-                      aria-label={`Add ${r.title} to list`}
-                      onClick={() => addRecipeToList(r.id)}
-                    >
-                      Add to list
-                    </Button>
-                    <Button
-                      variant="link"
-                      aria-label={`Delete ${r.title}`}
-                      onClick={() => remove(r)}
-                    >
-                      🗑
+                    <AddToListButton recipeId={r.id} title={r.title} onError={setError} />
+                    <Button variant="link" aria-label={`Delete ${r.title}`} onClick={() => remove(r)}>
+                      <TrashIcon size={18} />
                     </Button>
                   </Card>
                 </li>
