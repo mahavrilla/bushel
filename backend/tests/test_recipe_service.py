@@ -155,3 +155,44 @@ def test_build_recipe_normalizes_unit(mock_parse, db_session):
 
     row = db_session.query(RecipeIngredient).filter_by(recipe_id=recipe.id).one()
     assert row.unit == "tablespoon"
+
+
+@patch("app.recipes.service.parse_line", side_effect=_stub_parse)
+def test_import_from_images_builds_recipe(mock_parse, db_session):
+    from app.llm.client import ScrapedRecipeLLM
+    from app.ingredients.canonicalize import CanonResult
+    from app.recipes.service import import_from_images
+
+    llm = MagicMock()
+    llm.scrape_recipe_from_images.return_value = ScrapedRecipeLLM(
+        title="Card", servings=2, raw_lines=["1 egg"]
+    )
+    egg = Ingredient(canonical_name="egg", aliases=[])
+    db_session.add(egg)
+    db_session.flush()
+
+    with patch(
+        "app.recipes.service.canonicalize_names",
+        return_value={"egg": CanonResult(egg.id, False)},
+    ):
+        recipe = import_from_images([(b"pngbytes", "image/png")], db=db_session, llm=llm)
+
+    saved = db_session.get(Recipe, recipe.id)
+    assert saved.title == "Card"
+    assert saved.default_servings == 2
+    assert saved.source_url is None
+    items = db_session.query(RecipeIngredient).filter_by(recipe_id=recipe.id).all()
+    assert [i.raw_text for i in items] == ["1 egg"]
+    llm.scrape_recipe_from_images.assert_called_once_with([(b"pngbytes", "image/png")])
+
+
+def test_import_from_images_raises_when_no_ingredients(db_session):
+    from app.llm.client import ScrapedRecipeLLM
+    from app.recipes.service import import_from_images, NoRecipeFoundError
+
+    llm = MagicMock()
+    llm.scrape_recipe_from_images.return_value = ScrapedRecipeLLM(
+        title="Blurry", servings=None, raw_lines=[]
+    )
+    with pytest.raises(NoRecipeFoundError):
+        import_from_images([(b"pngbytes", "image/png")], db=db_session, llm=llm)
