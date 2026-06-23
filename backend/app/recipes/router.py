@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -23,15 +23,20 @@ from app.recipes.schemas import (
     RecipeSummary,
 )
 from app.recipes.service import (
+    NoRecipeFoundError,
     RecipeNotFoundError,
     add_ingredient,
     create_from_manual,
     delete_recipe,
     extract_ingredient_lines,
+    import_from_images,
     import_from_url,
 )
 
 router = APIRouter(prefix="/recipes", tags=["recipes"])
+
+_ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+_MAX_PHOTOS = 5
 
 
 def get_llm() -> LLMClient:
@@ -74,6 +79,39 @@ def import_recipe(body: ImportRequest, db: Session = Depends(get_db), llm: LLMCl
         recipe = import_from_url(body.url, db=db, llm=llm)
     except ScrapeError as exc:
         raise HTTPException(status_code=422, detail=f"Could not import recipe: {exc}")
+    db.commit()
+    return _serialize(recipe, db)
+
+
+@router.post("/import-photo", response_model=RecipeRead, status_code=201)
+async def import_photo(
+    files: list[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+    llm: LLMClient = Depends(get_llm),
+):
+    if not files:
+        raise HTTPException(status_code=422, detail="At least one photo is required")
+    if len(files) > _MAX_PHOTOS:
+        raise HTTPException(status_code=422, detail=f"At most {_MAX_PHOTOS} photos are allowed")
+    images: list[tuple[bytes, str]] = []
+    for f in files:
+        if f.content_type not in _ALLOWED_IMAGE_TYPES:
+            raise HTTPException(
+                status_code=422, detail="Photos must be JPEG, PNG, WebP, or GIF."
+            )
+        data = await f.read()
+        if not data:
+            raise HTTPException(status_code=422, detail="One of the photos was empty.")
+        images.append((data, f.content_type))
+    try:
+        recipe = import_from_images(images, db=db, llm=llm)
+    except LLMUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=f"Photo import unavailable: {exc}")
+    except NoRecipeFoundError:
+        raise HTTPException(
+            status_code=422,
+            detail="Couldn't read a recipe from those photos. Try a clearer photo or enter it manually.",
+        )
     db.commit()
     return _serialize(recipe, db)
 

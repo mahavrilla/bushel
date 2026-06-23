@@ -201,6 +201,66 @@ def test_patch_ingredient_normalizes_unit(db_session):
     app.dependency_overrides.clear()
 
 
+def test_import_photo_endpoint(db_session):
+    client = _client(db_session)
+    with patch("app.recipes.router.import_from_images") as mock_import:
+        recipe = Recipe(title="FromPhoto", default_servings=2)
+        db_session.add(recipe)
+        db_session.flush()
+        mock_import.return_value = recipe
+        resp = client.post(
+            "/recipes/import-photo",
+            files=[("files", ("card.png", b"pngbytes", "image/png"))],
+        )
+    assert resp.status_code == 201
+    assert resp.json()["title"] == "FromPhoto"
+    mock_import.assert_called_once_with([(b"pngbytes", "image/png")], db=db_session, llm=ANY)
+    app.dependency_overrides.clear()
+
+
+def test_import_photo_rejects_unsupported_type(db_session):
+    client = _client(db_session)
+    resp = client.post(
+        "/recipes/import-photo",
+        files=[("files", ("photo.heic", b"heicbytes", "image/heic"))],
+    )
+    assert resp.status_code == 422
+    app.dependency_overrides.clear()
+
+
+def test_import_photo_requires_a_file(db_session):
+    client = _client(db_session)
+    resp = client.post("/recipes/import-photo")
+    assert resp.status_code == 422
+    app.dependency_overrides.clear()
+
+
+def test_import_photo_503_when_llm_unavailable(db_session):
+    from app.llm.client import LLMUnavailableError
+
+    client = _client(db_session)
+    with patch("app.recipes.router.import_from_images", side_effect=LLMUnavailableError("no key")):
+        resp = client.post(
+            "/recipes/import-photo",
+            files=[("files", ("card.png", b"x", "image/png"))],
+        )
+    assert resp.status_code == 503
+    app.dependency_overrides.clear()
+
+
+def test_import_photo_422_when_no_recipe_found(db_session):
+    from app.recipes.service import NoRecipeFoundError
+
+    client = _client(db_session)
+    with patch("app.recipes.router.import_from_images", side_effect=NoRecipeFoundError("empty")):
+        resp = client.post(
+            "/recipes/import-photo",
+            files=[("files", ("card.png", b"x", "image/png"))],
+        )
+    assert resp.status_code == 422
+    app.dependency_overrides.clear()
+
+
 def test_delete_recipe_on_list_recomputes_draft(db_session):
     recipe, ri, ing = _seed_recipe(db_session)
     draft = GroceryList(name="Draft", status="draft")
