@@ -209,7 +209,11 @@ export function RecipeDetail() {
       )}
 
       {reviewed.length > 0 && (
-        <ReviewedSection count={reviewed.length} defaultOpen={needsReview.length === 0}>
+        <ReviewedSection
+          key={needsReview.length === 0 ? "all-reviewed" : "has-flagged"}
+          count={reviewed.length}
+          defaultOpen={needsReview.length === 0}
+        >
           {reviewed.map((ing) => (
             <li key={ing.id}>
               <Row recipeId={recipe.id} ingredient={ing} defaultOpen={false} onSaved={setRecipe} />

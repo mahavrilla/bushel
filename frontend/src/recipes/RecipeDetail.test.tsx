@@ -100,4 +100,15 @@ describe("RecipeDetail", () => {
     await userEvent.click(screen.getByRole("button", { name: /delete 2 cups flour/i }));
     expect(del).not.toHaveBeenCalled();
   });
+
+  it("re-syncs the editor after a server-normalized save", async () => {
+    vi.spyOn(api, "updateIngredient").mockResolvedValue({
+      ...recipe,
+      ingredients: [{ ...recipe.ingredients[0], unit: "tablespoon" }],
+    });
+    showApi();
+    await userEvent.click(await screen.findByRole("button", { name: /edit 2 cups flour/i }));
+    await userEvent.click(screen.getByRole("button", { name: /save 2 cups flour/i }));
+    await waitFor(() => expect(screen.getByLabelText("Unit")).toHaveValue("tablespoon"));
+  });
 });
