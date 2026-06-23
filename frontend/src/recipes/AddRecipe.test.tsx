@@ -25,6 +25,7 @@ describe("AddRecipe", () => {
       new Response(JSON.stringify({ id: 7, title: "X", servings: 1, source_url: null, ingredients: [] }), { status: 200 }),
     );
     renderAddRecipe();
+    await userEvent.click(screen.getByRole("tab", { name: /manual/i }));
     await userEvent.type(screen.getByLabelText(/title/i), "Bread");
     await userEvent.type(screen.getByLabelText(/ingredients/i), "2 cups flour");
     await userEvent.click(screen.getByRole("button", { name: /save recipe/i }));
@@ -52,6 +53,7 @@ describe("AddRecipe", () => {
   it("extracts ingredients into the textarea", async () => {
     const spy = vi.spyOn(api, "extractIngredients").mockResolvedValue(["ground turkey", "olive oil"]);
     renderAddRecipe();
+    await userEvent.click(screen.getByRole("tab", { name: /manual/i }));
     const textarea = screen.getByLabelText(/ingredients/i);
     await userEvent.type(textarea, "messy recipe block");
     await userEvent.click(screen.getByRole("button", { name: /extract ingredients/i }));
@@ -62,8 +64,18 @@ describe("AddRecipe", () => {
   it("shows an error when extraction fails", async () => {
     vi.spyOn(api, "extractIngredients").mockRejectedValue(new Error("boom"));
     renderAddRecipe();
+    await userEvent.click(screen.getByRole("tab", { name: /manual/i }));
     await userEvent.type(screen.getByLabelText(/ingredients/i), "block");
     await userEvent.click(screen.getByRole("button", { name: /extract ingredients/i }));
     expect(await screen.findByRole("alert")).toBeInTheDocument();
+  });
+
+  it("defaults to URL mode and toggles to manual", async () => {
+    renderAddRecipe();
+    expect(screen.getByLabelText(/recipe url/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^title$/i)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("tab", { name: /manual/i }));
+    expect(screen.getByLabelText(/^title$/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/recipe url/i)).not.toBeInTheDocument();
   });
 });
