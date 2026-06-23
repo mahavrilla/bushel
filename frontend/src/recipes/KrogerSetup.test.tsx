@@ -57,4 +57,17 @@ describe("KrogerSetup", () => {
     render(<KrogerSetup />);
     expect(await screen.findByText(/Home store: Kroger Eastgate/)).toBeInTheDocument();
   });
+
+  it("shows a connected pill when connected and not expired", async () => {
+    vi.spyOn(api, "getKrogerStatus").mockResolvedValue({ connected: true, expired: false });
+    render(<KrogerSetup />);
+    expect(await screen.findByText(/connected ✓/i)).toBeInTheDocument();
+  });
+
+  it("shows session-expired with a reconnect button", async () => {
+    vi.spyOn(api, "getKrogerStatus").mockResolvedValue({ connected: true, expired: true });
+    render(<KrogerSetup />);
+    expect(await screen.findByText(/session expired/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /reconnect/i })).toBeInTheDocument();
+  });
 });

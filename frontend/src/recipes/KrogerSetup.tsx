@@ -5,6 +5,7 @@ import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Input } from "../components/ui/Input";
 import { PageHeader } from "../components/ui/PageHeader";
+import { Pill } from "../components/ui/Pill";
 import type { KrogerLocation, KrogerStatus } from "./types";
 
 export function KrogerSetup() {
@@ -42,11 +43,18 @@ export function KrogerSetup() {
     <div className="flex flex-col gap-4">
       <PageHeader title="Kroger" />
 
-      <Card>
+      <Card className="flex flex-col gap-3">
         {status?.connected ? (
-          <p className="text-ink">
-            Connected{status.expired ? " — session expired, reconnect below." : "."}
-          </p>
+          status.expired ? (
+            <div className="flex items-center gap-3">
+              <Pill tone="warning">Session expired</Pill>
+              <Button className="ml-auto" onClick={connect}>
+                Reconnect
+              </Button>
+            </div>
+          ) : (
+            <Pill tone="success">Connected ✓</Pill>
+          )
         ) : (
           <Button onClick={connect}>Connect Kroger</Button>
         )}
@@ -54,7 +62,7 @@ export function KrogerSetup() {
 
       <Card className="flex flex-col gap-3">
         <h3 className="text-lg font-semibold text-heading">Home store</h3>
-        {selectedName && <p className="text-sm text-success">Home store: {selectedName}</p>}
+        {selectedName && <p className="text-sm font-medium text-heading">Home store: {selectedName}</p>}
         <div className="flex items-end gap-2">
           <Input label="Zip code" value={zip} onChange={(e) => setZip(e.target.value)} className="w-32" />
           <Button variant="secondary" loading={busy} onClick={findStores}>
