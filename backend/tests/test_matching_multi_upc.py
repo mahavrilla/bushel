@@ -9,6 +9,7 @@ from app.models import (
     GroceryListItem,
     Ingredient,
     IngredientProductMap,
+    PriceCache,
     PurchaseLog,
 )
 from app.settings import service as settings_service
@@ -179,3 +180,72 @@ def test_remove_last_alternative_clears_pick(db_session):
     service.remove_alternative(db_session, item.id, "ONLY")
     db_session.refresh(item)
     assert item.kroger_upc is None
+
+
+def _seed_prices(db, loc, now, rows):
+    for upc, reg, promo, size, stock in rows:
+        db.add(PriceCache(kroger_upc=upc, location_id=loc, regular_cents=reg,
+                          promo_cents=promo, size_text=size, stock_level=stock, fetched_at=now))
+    db.flush()
+
+
+def test_single_upc_item_has_no_alternatives(db_session):
+    gl, ing, item = _draft_with_item(db_session)
+    db_session.add(IngredientProductMap(ingredient_id=ing.id, kroger_upc="ONLY",
+                                        kroger_description="Only", package_size="1 ct", is_default=True))
+    db_session.flush()
+    read = service.get_match_state(db_session)
+    assert read.items[0].alternatives == []
+    assert read.items[0].insight is None
+
+
+def test_multi_upc_item_builds_alternatives_and_cheaper_delta(db_session):
+    gl, ing, item = _draft_with_item(db_session)
+    _two_alts(db_session, ing)
+    item.kroger_upc = "REG"
+    db_session.flush()
+    now = datetime.now(timezone.utc)
+    # current REG effective 549; ORG on sale at 429 -> cheaper by 120 cents
+    _seed_prices(db_session, "L1", now, [
+        ("REG", 549, None, "32 fl oz", "HIGH"),
+        ("ORG", 599, 429, "25 fl oz", "HIGH"),
+    ])
+    read = service.get_match_state(db_session, client=None, now=now)
+    mi = read.items[0]
+    assert {a.upc for a in mi.alternatives} == {"REG", "ORG"}
+    cur = next(a for a in mi.alternatives if a.upc == "REG")
+    org = next(a for a in mi.alternatives if a.upc == "ORG")
+    assert cur.is_current is True
+    assert org.effective == 4.29
+    assert org.on_sale is True
+    assert org.unit_price is not None  # 4.29 / 25
+    assert mi.insight.cheaper_delta_cents == 120
+    assert mi.insight.on_sale is True
+    assert mi.insight.default_out_of_stock is False
+
+
+def test_insight_flags_default_out_of_stock(db_session):
+    gl, ing, item = _draft_with_item(db_session)
+    _two_alts(db_session, ing)
+    item.kroger_upc = "REG"
+    db_session.flush()
+    now = datetime.now(timezone.utc)
+    _seed_prices(db_session, "L1", now, [
+        ("REG", 549, None, "32 fl oz", "TEMPORARILY_OUT_OF_STOCK"),
+        ("ORG", 549, None, "25 fl oz", "HIGH"),
+    ])
+    read = service.get_match_state(db_session, client=None, now=now)
+    assert read.items[0].insight.default_out_of_stock is True
+    assert read.items[0].insight.cheaper_delta_cents is None  # equal price, none cheaper
+
+
+def test_alternatives_present_without_prices_when_no_store(db_session):
+    gl, ing, item = _draft_with_item(db_session, store=None)
+    _two_alts(db_session, ing)
+    item.kroger_upc = "REG"
+    db_session.flush()
+    read = service.get_match_state(db_session, client=None)
+    mi = read.items[0]
+    assert {a.upc for a in mi.alternatives} == {"REG", "ORG"}
+    assert all(a.effective is None for a in mi.alternatives)
+    assert mi.insight.on_sale is False

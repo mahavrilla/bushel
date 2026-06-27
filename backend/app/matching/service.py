@@ -12,10 +12,14 @@ from app.consolidate.service import get_or_create_draft
 from app.kroger import auth as kroger_auth
 from app.settings import service as settings_service
 from app.kroger.client import KrogerAuthError, KrogerClient, KrogerError
+from app.matching import pricing
+from app.matching.price_cache import PriceInfo, get_prices
 from app.matching.purchase import compute_purchase_qty
 from app.matching.schemas import (
     AddAlternativeRequest,
+    Alternative,
     ConfirmRequest,
+    ItemInsight,
     MatchItemRead,
     MatchRead,
     ProductChoice,
@@ -76,6 +80,46 @@ def _resolve_default_upc(db: Session, ingredient_id: int) -> str | None:
     return rows[0].kroger_upc
 
 
+def _to_alternative(
+    m: IngredientProductMap, current_upc: str | None, price: PriceInfo | None
+) -> Alternative:
+    reg_c = price.regular_cents if price else None
+    promo_c = price.promo_cents if price else None
+    size = (price.size_text if price and price.size_text else m.package_size)
+    eff_c = pricing.effective_cents(reg_c, promo_c)
+    up = pricing.unit_price(eff_c, size)
+    return Alternative(
+        upc=m.kroger_upc,
+        description=m.kroger_description or "",
+        size=size,
+        regular=None if reg_c is None else reg_c / 100.0,
+        promo=None if promo_c is None else promo_c / 100.0,
+        effective=None if eff_c is None else eff_c / 100.0,
+        unit_price=None if up is None else round(up[0], 4),
+        unit_label=None if up is None else up[1],
+        on_sale=pricing.is_on_sale(reg_c, promo_c),
+        stock_level=price.stock_level if price else None,
+        is_current=(m.kroger_upc == current_upc),
+        price_as_of=price.fetched_at if price else None,
+    )
+
+
+def _build_insight(alts: list[Alternative]) -> ItemInsight:
+    cur = next((a for a in alts if a.is_current), None)
+    cheaper = None
+    if cur is not None and cur.effective is not None:
+        priced = [a for a in alts if not a.is_current and a.effective is not None]
+        if priced:
+            cheapest = min(priced, key=lambda a: a.effective)
+            if cheapest.effective < cur.effective:
+                cheaper = round((cur.effective - cheapest.effective) * 100)
+    return ItemInsight(
+        cheaper_delta_cents=cheaper,
+        on_sale=any(a.on_sale for a in alts),
+        default_out_of_stock=(cur is not None and cur.stock_level == "TEMPORARILY_OUT_OF_STOCK"),
+    )
+
+
 def _current_choice(db: Session, item: GroceryListItem) -> ProductChoice | None:
     if item.kroger_upc is None:
         return None
@@ -118,25 +162,42 @@ def apply_remembered_products(db: Session) -> None:
     db.flush()
 
 
-def get_match_state(db: Session) -> MatchRead:
+def get_match_state(
+    db: Session, client: KrogerClient | None = None, *, now: datetime | None = None
+) -> MatchRead:
     apply_remembered_products(db)
     draft = get_or_create_draft(db)
+    now = now or datetime.now(timezone.utc)
     ing_by_id = {i.id: i for i in db.execute(select(Ingredient)).scalars().all()}
-    items = [
-        MatchItemRead(
-            item_id=it.id,
-            ingredient_id=it.ingredient_id,
-            ingredient_name=ing_by_id[it.ingredient_id].canonical_name,
-            total_qty=it.total_qty,
-            total_unit=it.total_unit,
-            purchase_qty=it.purchase_qty,
-            purchase_qty_estimated=it.purchase_qty_estimated,
-            kroger_upc=it.kroger_upc,
-            current=_current_choice(db, it),
-        )
-        for it in _kept_items(db, draft.id)
-    ]
     loc, store_name = settings_service.get_home_store(db)
+
+    items: list[MatchItemRead] = []
+    for it in _kept_items(db, draft.id):
+        maps = _acceptable_maps(db, it.ingredient_id)
+        alternatives: list[Alternative] = []
+        insight: ItemInsight | None = None
+        if len(maps) >= 2:
+            prices: dict[str, PriceInfo] = {}
+            if loc is not None:
+                prices = get_prices(db, client, [m.kroger_upc for m in maps], loc, now=now)
+            alternatives = [_to_alternative(m, it.kroger_upc, prices.get(m.kroger_upc)) for m in maps]
+            insight = _build_insight(alternatives)
+        items.append(
+            MatchItemRead(
+                item_id=it.id,
+                ingredient_id=it.ingredient_id,
+                ingredient_name=ing_by_id[it.ingredient_id].canonical_name,
+                total_qty=it.total_qty,
+                total_unit=it.total_unit,
+                purchase_qty=it.purchase_qty,
+                purchase_qty_estimated=it.purchase_qty_estimated,
+                kroger_upc=it.kroger_upc,
+                current=_current_choice(db, it),
+                alternatives=alternatives,
+                insight=insight,
+            )
+        )
+
     return MatchRead(
         connected=kroger_auth.get_auth(db) is not None,
         store_location_id=loc,
