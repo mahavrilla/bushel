@@ -144,3 +144,19 @@ def test_staple_and_link_models(db_session):
     assert gl.staples_seeded is False
     db_session.add(GroceryListStaple(list_id=gl.id, staple_id=staple.id))
     db_session.flush()
+
+
+def test_price_cache_round_trips(db_session):
+    from app.models import PriceCache
+
+    row = PriceCache(
+        kroger_upc="0001", location_id="L1",
+        regular_cents=549, promo_cents=429,
+        size_text="32 fl oz", stock_level="HIGH",
+    )
+    db_session.add(row)
+    db_session.flush()
+    got = db_session.query(PriceCache).filter_by(kroger_upc="0001", location_id="L1").one()
+    assert got.regular_cents == 549
+    assert got.promo_cents == 429
+    assert got.fetched_at is not None
