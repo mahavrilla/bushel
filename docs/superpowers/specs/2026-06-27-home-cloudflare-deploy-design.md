@@ -5,7 +5,7 @@ Date: 2026-06-27
 ## Goal
 
 Host Bushel for a single user (yourself) on an always-on home box, reachable at
-`https://bushel.havrilla.dev` with HTTPS and login-gating, without port-forwarding, a static IP,
+`https://bushel.havsfamily.com` with HTTPS and login-gating, without port-forwarding, a static IP,
 or the build-time IP coupling that currently breaks the app when DHCP reassigns the host. Keep it
 single-tenant (no in-app accounts); Cloudflare Access controls *who* can open it.
 
@@ -33,7 +33,7 @@ the SPA and the API share one origin and no absolute host is ever baked in.
 
 ```
 Cloudflare edge ──(outbound tunnel)──▶ cloudflared ──▶ web:80 (nginx)
-  bushel.havrilla.dev (HTTPS)                           ├── serves the SPA
+  bushel.havsfamily.com (HTTPS)                           ├── serves the SPA
   Cloudflare Access in front                            └── /api/* ─▶ api:8000  ─▶ db
 ```
 
@@ -86,7 +86,7 @@ behind any host:
 
 Behind the proxy the browser is at `…/api/auth/callback`; a redirect to `/kroger` lands on the
 SPA's Kroger page (showing "connected"). `KROGER_REDIRECT_URI` becomes
-`https://bushel.havrilla.dev/api/auth/callback` (proxied to the api's `/auth/callback`), and that
+`https://bushel.havsfamily.com/api/auth/callback` (proxied to the api's `/auth/callback`), and that
 URI is registered in the Kroger developer portal. Update the existing callback test to assert the
 relative `/kroger` redirect.
 
@@ -104,7 +104,7 @@ relative `/kroger` redirect.
       - web
   ```
   Token-based ("remotely-managed") tunnel: the hostname → service route
-  (`bushel.havrilla.dev` → `http://web:80`) is configured in the Cloudflare dashboard, so
+  (`bushel.havsfamily.com` → `http://web:80`) is configured in the Cloudflare dashboard, so
   cloudflared only needs `TUNNEL_TOKEN`. It reaches `web` over the compose network; no published
   ports needed for the tunnel path.
 - Add `restart: unless-stopped` to `db`, `api`, and `web`.
@@ -115,7 +115,7 @@ relative `/kroger` redirect.
 
 ### 5. Cloudflare Access (dashboard, no code)
 
-One Access application for `bushel.havrilla.dev` with two policies:
+One Access application for `bushel.havsfamily.com` with two policies:
 - **Bypass** — include: your home public IP (so you're auto-logged-in on your WiFi).
 - **Allow** — include: your Google email (login required everywhere else).
 
@@ -125,19 +125,19 @@ needed.
 
 ### 6. Docs (`.env.example`, `README.md`)
 
-Document `TUNNEL_TOKEN`, `VITE_API_URL=/api`, and `KROGER_REDIRECT_URI=https://bushel.havrilla.dev/api/auth/callback`,
+Document `TUNNEL_TOKEN`, `VITE_API_URL=/api`, and `KROGER_REDIRECT_URI=https://bushel.havsfamily.com/api/auth/callback`,
 and add a short "Deploy on a home box via Cloudflare" section with the runbook below.
 
 ## Runbook (operator steps, not code)
 
 1. Provision the box (anything that runs Docker — Pi/mini-PC/old laptop); install Docker + Compose.
-2. Ensure `havrilla.dev` is on Cloudflare (nameservers). In **Zero Trust → Networks → Tunnels**:
-   create a tunnel, copy its token → `TUNNEL_TOKEN`; add public hostname `bushel.havrilla.dev` →
+2. Ensure `havsfamily.com` is on Cloudflare (nameservers). In **Zero Trust → Networks → Tunnels**:
+   create a tunnel, copy its token → `TUNNEL_TOKEN`; add public hostname `bushel.havsfamily.com` →
    service `http://web:80`.
-3. In **Zero Trust → Access → Applications**: add `bushel.havrilla.dev`; add the Bypass (home IP)
+3. In **Zero Trust → Access → Applications**: add `bushel.havsfamily.com`; add the Bypass (home IP)
    and Allow (your email) policies.
 4. In the **Kroger developer portal**: add redirect URI
-   `https://bushel.havrilla.dev/api/auth/callback`.
+   `https://bushel.havsfamily.com/api/auth/callback`.
 5. Copy `.env` to the box (secrets + `TUNNEL_TOKEN`, `VITE_API_URL=/api`, the new
    `KROGER_REDIRECT_URI`); run `docker compose up -d --build`.
 
