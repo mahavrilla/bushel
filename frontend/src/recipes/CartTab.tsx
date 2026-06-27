@@ -104,6 +104,23 @@ export function CartTab() {
     return n == null ? "—" : `$${n.toFixed(2)}`;
   }
 
+  function priceAge(alts: Alternative[]): string | null {
+    const stamps = alts.map((a) => a.price_as_of).filter((s): s is string => !!s);
+    if (stamps.length === 0) return null;
+    const newest = stamps.reduce((a, b) => (a > b ? a : b));
+    const ms = Date.now() - new Date(newest).getTime();
+    if (!Number.isFinite(ms) || ms < 0) return "prices updated recently";
+    const hours = Math.round(ms / 3_600_000);
+    if (hours < 1) return "prices just now";
+    if (hours < 24) return `prices ~${hours}h ago`;
+    return `prices ~${Math.round(hours / 24)}d ago`;
+  }
+
+  function openAddAlternative(it: MatchItem) {
+    setPickerMode("alternative");
+    setOpenItem(it);
+  }
+
   function badges(it: MatchItem) {
     const ins = it.insight;
     if (!ins) return null;
@@ -193,27 +210,27 @@ export function CartTab() {
           ) : (
             <p className="text-sm text-muted">need {it.total_qty ?? "?"} {it.total_unit ?? ""}</p>
           )}
-          <Button variant="link" className="px-0" onClick={() => setOpenItem(it)}>
-            {it.current ? "Change" : "Choose product →"}
-          </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button variant="link" className="px-0" onClick={() => setOpenItem(it)}>
+              {it.current ? "Change" : "Choose product →"}
+            </Button>
+            {it.current && (
+              <Button variant="link" className="px-0" onClick={() => openAddAlternative(it)}>
+                + add alternative…
+              </Button>
+            )}
+          </div>
           {badges(it)}
           {expanded.has(it.item_id) && it.alternatives.length > 0 && (
             <div className="mt-2 flex flex-col gap-2">
               <ul className="flex flex-col gap-2">
                 {it.alternatives.map((a) => altRow(it, a))}
               </ul>
-              <Button
-                variant="link"
-                className="px-0"
-                onClick={() => {
-                  setPickerMode("alternative");
-                  setOpenItem(it);
-                }}
-              >
+              <Button variant="link" className="px-0" onClick={() => openAddAlternative(it)}>
                 + find similar…
               </Button>
-              {it.alternatives.some((a) => a.price_as_of) && (
-                <p className="text-xs text-muted">prices updated recently</p>
+              {priceAge(it.alternatives) && (
+                <p className="text-xs text-muted">{priceAge(it.alternatives)}</p>
               )}
             </div>
           )}

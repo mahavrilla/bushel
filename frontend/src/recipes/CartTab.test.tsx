@@ -89,4 +89,20 @@ describe("CartTab", () => {
     await userEvent.click(screen.getByRole("button", { name: /use this/i }));
     await waitFor(() => expect(sw).toHaveBeenCalledWith(5, "ORG"));
   });
+
+  it("bootstraps a second product via add-alternative on a single-product row", async () => {
+    vi.spyOn(api, "getMatch").mockResolvedValue(baseMatch);
+    vi.spyOn(api, "searchItemProducts").mockResolvedValue([
+      { upc: "0002", description: "Organic AP Flour", size: "5 lb", price: 4.99, stock_level: "HIGH" },
+    ]);
+    const add = vi.spyOn(api, "addAlternative").mockResolvedValue(baseMatch);
+    render(<CartTab />);
+    await screen.findByText(/AP Flour/);
+    await userEvent.click(screen.getByRole("button", { name: /add alternative/i }));
+    expect(await screen.findByText(/Add an alternative/i)).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("button", { name: /add as alternative/i }));
+    await waitFor(() =>
+      expect(add).toHaveBeenCalledWith(1, expect.objectContaining({ kroger_upc: "0002" })),
+    );
+  });
 });
