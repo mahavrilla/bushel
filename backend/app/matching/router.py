@@ -11,20 +11,25 @@ from app.kroger.client import KrogerAuthError, KrogerClient, KrogerError
 from app.kroger.router import get_kroger_client
 from app.matching import service
 from app.matching.schemas import (
+    AddAlternativeRequest,
     ConfirmRequest,
     MatchRead,
     ProductChoice,
     SendRequest,
     SendResult,
     SetStoreRequest,
+    SwitchPickRequest,
 )
 
 router = APIRouter(prefix="/list", tags=["matching"])
 
 
 @router.get("/match", response_model=MatchRead)
-def get_match(db: Session = Depends(get_db)):
-    state = service.get_match_state(db)
+def get_match(
+    db: Session = Depends(get_db),
+    kroger: KrogerClient = Depends(get_kroger_client),
+):
+    state = service.get_match_state(db, kroger)
     db.commit()
     return state
 
@@ -60,12 +65,67 @@ def search_products(
 
 
 @router.post("/items/{item_id}/product", response_model=MatchRead)
-def confirm_product(item_id: int, body: ConfirmRequest, db: Session = Depends(get_db)):
+def confirm_product(
+    item_id: int,
+    body: ConfirmRequest,
+    db: Session = Depends(get_db),
+    kroger: KrogerClient = Depends(get_kroger_client),
+):
     try:
         service.confirm_product(db, item_id, body)
     except service.ItemNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
-    state = service.get_match_state(db)
+    state = service.get_match_state(db, kroger)
+    db.commit()
+    return state
+
+
+@router.post("/items/{item_id}/alternatives", response_model=MatchRead)
+def add_alternative(
+    item_id: int,
+    body: AddAlternativeRequest,
+    db: Session = Depends(get_db),
+    kroger: KrogerClient = Depends(get_kroger_client),
+):
+    try:
+        service.add_alternative(db, item_id, body)
+    except service.ItemNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    state = service.get_match_state(db, kroger)
+    db.commit()
+    return state
+
+
+@router.post("/items/{item_id}/pick", response_model=MatchRead)
+def switch_pick(
+    item_id: int,
+    body: SwitchPickRequest,
+    db: Session = Depends(get_db),
+    kroger: KrogerClient = Depends(get_kroger_client),
+):
+    try:
+        service.switch_pick(db, item_id, body.kroger_upc)
+    except service.ItemNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except service.UpcNotAcceptableError as exc:
+        raise HTTPException(status_code=409, detail={"error": "bad_upc", "message": str(exc)})
+    state = service.get_match_state(db, kroger)
+    db.commit()
+    return state
+
+
+@router.delete("/items/{item_id}/alternatives/{upc}", response_model=MatchRead)
+def remove_alternative(
+    item_id: int,
+    upc: str,
+    db: Session = Depends(get_db),
+    kroger: KrogerClient = Depends(get_kroger_client),
+):
+    try:
+        service.remove_alternative(db, item_id, upc)
+    except service.ItemNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    state = service.get_match_state(db, kroger)
     db.commit()
     return state
 

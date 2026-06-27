@@ -73,9 +73,31 @@ export interface ProductChoice {
   description: string;
   size: string | null;
   price: number | null;
+  promo?: number | null;
   stock_level: string | null;
   brand?: string | null;
   image_url?: string | null;
+}
+
+export interface Alternative {
+  upc: string;
+  description: string;
+  size: string | null;
+  regular: number | null;
+  promo: number | null;
+  effective: number | null;
+  unit_price: number | null;
+  unit_label: string | null;
+  on_sale: boolean;
+  stock_level: string | null;
+  is_current: boolean;
+  price_as_of: string | null;
+}
+
+export interface ItemInsight {
+  cheaper_delta_cents: number | null;
+  on_sale: boolean;
+  default_out_of_stock: boolean;
 }
 
 export interface MatchItem {
@@ -88,6 +110,8 @@ export interface MatchItem {
   purchase_qty_estimated: boolean;
   kroger_upc: string | null;
   current: ProductChoice | null;
+  alternatives: Alternative[];
+  insight: ItemInsight | null;
 }
 
 export interface MatchData {

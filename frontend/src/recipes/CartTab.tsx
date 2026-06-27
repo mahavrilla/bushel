@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { ApiError, confirmProduct, getMatch, sendCart, setPantryDecision } from "../api";
+import { ApiError, addAlternative, confirmProduct, getMatch, removeAlternative, sendCart, setPantryDecision, switchPick } from "../api";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { ErrorBanner } from "../components/ui/ErrorBanner";
@@ -8,7 +8,7 @@ import { Pill } from "../components/ui/Pill";
 import { Spinner } from "../components/ui/Spinner";
 import { TrashIcon } from "../components/ui/icons";
 import { ProductPickerModal } from "./ProductPickerModal";
-import type { MatchData, MatchItem, ProductChoice, SendResult } from "./types";
+import type { Alternative, MatchData, MatchItem, ProductChoice, SendResult } from "./types";
 
 export function CartTab() {
   const [match, setMatch] = useState<MatchData | null>(null);
@@ -16,6 +16,8 @@ export function CartTab() {
   const [modality, setModality] = useState("PICKUP");
   const [sendResult, setSendResult] = useState<SendResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const [pickerMode, setPickerMode] = useState<"confirm" | "alternative">("confirm");
 
   function load() {
     getMatch().then(setMatch).catch(() => setMatch(null));
@@ -30,21 +32,51 @@ export function CartTab() {
     );
   }
 
+  function toggleExpand(itemId: number) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      next.has(itemId) ? next.delete(itemId) : next.add(itemId);
+      return next;
+    });
+  }
+
+  async function choosePick(itemId: number, upc: string) {
+    setError(null);
+    try {
+      setMatch(await switchPick(itemId, upc));
+    } catch (err) {
+      report(err);
+    }
+  }
+
+  async function dropAlternative(itemId: number, upc: string) {
+    setError(null);
+    try {
+      setMatch(await removeAlternative(itemId, upc));
+    } catch (err) {
+      report(err);
+    }
+  }
+
   async function pick(product: ProductChoice) {
     if (openItem === null) return;
     setError(null);
     try {
+      const body = {
+        kroger_upc: product.upc,
+        kroger_description: product.description,
+        package_size: product.size,
+      };
       setMatch(
-        await confirmProduct(openItem.item_id, {
-          kroger_upc: product.upc,
-          kroger_description: product.description,
-          package_size: product.size,
-        }),
+        pickerMode === "alternative"
+          ? await addAlternative(openItem.item_id, body)
+          : await confirmProduct(openItem.item_id, body),
       );
     } catch (err) {
       report(err);
     } finally {
       setOpenItem(null);
+      setPickerMode("confirm");
     }
   }
 
@@ -66,6 +98,72 @@ export function CartTab() {
     } catch (err) {
       report(err);
     }
+  }
+
+  function money(n: number | null): string {
+    return n == null ? "—" : `$${n.toFixed(2)}`;
+  }
+
+  function badges(it: MatchItem) {
+    const ins = it.insight;
+    if (!ins) return null;
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        {ins.cheaper_delta_cents != null && (
+          <Pill tone="success">↓ ${(ins.cheaper_delta_cents / 100).toFixed(2)} cheaper alt</Pill>
+        )}
+        {ins.on_sale && <Pill tone="warning">on sale</Pill>}
+        {ins.default_out_of_stock && <Pill tone="danger">default out of stock</Pill>}
+        <Button variant="link" className="px-0" onClick={() => toggleExpand(it.item_id)}>
+          {expanded.has(it.item_id) ? "Hide" : "Compare"}
+        </Button>
+      </div>
+    );
+  }
+
+  function altRow(it: MatchItem, a: Alternative) {
+    return (
+      <li key={a.upc} className="flex items-center gap-3 rounded-xl border border-line p-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm text-ink">
+            {a.description}
+            {a.is_current && <span className="ml-2 text-xs font-semibold text-success">current</span>}
+            {a.stock_level === "TEMPORARILY_OUT_OF_STOCK" && <Pill tone="danger">Out of stock</Pill>}
+          </p>
+          <p className="text-xs text-muted">
+            {a.size}
+            {a.effective != null && (
+              <>
+                {" · "}
+                {a.on_sale ? (
+                  <>
+                    <span className="font-semibold text-warning">{money(a.effective)}</span>{" "}
+                    <span className="line-through">{money(a.regular)}</span>
+                  </>
+                ) : (
+                  money(a.effective)
+                )}
+                {a.unit_price != null && a.unit_label && ` · $${a.unit_price.toFixed(2)}/${a.unit_label}`}
+              </>
+            )}
+            {a.effective == null && " · price unavailable"}
+          </p>
+        </div>
+        {!a.is_current && (
+          <Button variant="secondary" onClick={() => choosePick(it.item_id, a.upc)}>
+            Use this
+          </Button>
+        )}
+        <button
+          type="button"
+          aria-label={`Remove ${a.description}`}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-canvas hover:text-danger"
+          onClick={() => dropAlternative(it.item_id, a.upc)}
+        >
+          <TrashIcon size={16} />
+        </button>
+      </li>
+    );
   }
 
   if (!match)
@@ -98,6 +196,27 @@ export function CartTab() {
           <Button variant="link" className="px-0" onClick={() => setOpenItem(it)}>
             {it.current ? "Change" : "Choose product →"}
           </Button>
+          {badges(it)}
+          {expanded.has(it.item_id) && it.alternatives.length > 0 && (
+            <div className="mt-2 flex flex-col gap-2">
+              <ul className="flex flex-col gap-2">
+                {it.alternatives.map((a) => altRow(it, a))}
+              </ul>
+              <Button
+                variant="link"
+                className="px-0"
+                onClick={() => {
+                  setPickerMode("alternative");
+                  setOpenItem(it);
+                }}
+              >
+                + find similar…
+              </Button>
+              {it.alternatives.some((a) => a.price_as_of) && (
+                <p className="text-xs text-muted">prices updated recently</p>
+              )}
+            </div>
+          )}
         </div>
         <button
           type="button"
@@ -163,11 +282,16 @@ export function CartTab() {
 
       {openItem && (
         <ProductPickerModal
-          key={openItem.item_id}
+          key={`${openItem.item_id}-${pickerMode}`}
           itemId={openItem.item_id}
           ingredientName={openItem.ingredient_name}
           onChoose={pick}
-          onClose={() => setOpenItem(null)}
+          onClose={() => {
+            setOpenItem(null);
+            setPickerMode("confirm");
+          }}
+          title={pickerMode === "alternative" ? "Add an alternative" : "Choose a product"}
+          chooseLabel={pickerMode === "alternative" ? "Add as alternative" : "Choose"}
         />
       )}
     </Card>

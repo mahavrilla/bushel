@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from pydantic import BaseModel
 
 
@@ -15,6 +17,27 @@ class ProductChoice(BaseModel):
     image_url: str | None = None
 
 
+class Alternative(BaseModel):
+    upc: str
+    description: str
+    size: str | None = None
+    regular: float | None = None
+    promo: float | None = None
+    effective: float | None = None
+    unit_price: float | None = None
+    unit_label: str | None = None
+    on_sale: bool = False
+    stock_level: str | None = None
+    is_current: bool = False
+    price_as_of: datetime | None = None
+
+
+class ItemInsight(BaseModel):
+    cheaper_delta_cents: int | None = None
+    on_sale: bool = False
+    default_out_of_stock: bool = False
+
+
 class MatchItemRead(BaseModel):
     item_id: int
     ingredient_id: int
@@ -25,6 +48,8 @@ class MatchItemRead(BaseModel):
     purchase_qty_estimated: bool
     kroger_upc: str | None
     current: ProductChoice | None
+    alternatives: list[Alternative] = []
+    insight: ItemInsight | None = None
 
 
 class MatchRead(BaseModel):
@@ -43,6 +68,16 @@ class ConfirmRequest(BaseModel):
     kroger_upc: str
     kroger_description: str | None = None
     package_size: str | None = None
+
+
+class AddAlternativeRequest(BaseModel):
+    kroger_upc: str
+    kroger_description: str | None = None
+    package_size: str | None = None
+
+
+class SwitchPickRequest(BaseModel):
+    kroger_upc: str
 
 
 class SendRequest(BaseModel):

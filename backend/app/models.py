@@ -156,3 +156,22 @@ class GroceryListStaple(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     list_id: Mapped[int] = mapped_column(ForeignKey("grocery_lists.id", ondelete="CASCADE"))
     staple_id: Mapped[int] = mapped_column(ForeignKey("staples.id", ondelete="CASCADE"))
+
+
+class PriceCache(Base):
+    __tablename__ = "price_cache"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    kroger_upc: Mapped[str] = mapped_column(String(50))
+    location_id: Mapped[str] = mapped_column(String(50))
+    regular_cents: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    promo_cents: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    size_text: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    stock_level: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    fetched_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("kroger_upc", "location_id", name="uq_price_cache_upc_loc"),
+    )
