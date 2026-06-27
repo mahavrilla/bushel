@@ -134,3 +134,55 @@ def test_search_products_featured_image_without_url_yields_none():
 
     prods = _client(handler).search_products("tok", "x", "L1")
     assert prods[0].image_url is None
+
+
+def test_search_products_captures_promo():
+    def handler(request):
+        return httpx.Response(200, json={"data": [
+            {"upc": "0001", "description": "Creamer",
+             "items": [{"size": "32 fl oz",
+                        "price": {"regular": 5.49, "promo": 4.29},
+                        "inventory": {"stockLevel": "HIGH"}}]},
+        ]})
+
+    prods = _client(handler).search_products("tok", "creamer", "L1")
+    assert prods[0].price == 5.49
+    assert prods[0].promo == 4.29
+
+
+def test_get_product_by_id_parses_price_and_stock():
+    def handler(request):
+        assert request.url.path == "/v1/products/0001"
+        assert request.url.params["filter.locationId"] == "L1"
+        assert request.headers["Authorization"] == "Bearer tok"
+        return httpx.Response(200, json={"data": {
+            "upc": "0001", "description": "Califia Organic",
+            "items": [{"size": "25 fl oz",
+                       "price": {"regular": 5.99, "promo": 4.29},
+                       "inventory": {"stockLevel": "LOW"}}]}})
+
+    prod = _client(handler).get_product_by_id("tok", "0001", "L1")
+    assert prod.upc == "0001"
+    assert prod.size == "25 fl oz"
+    assert prod.price == 5.99
+    assert prod.promo == 4.29
+    assert prod.stock_level == "LOW"
+
+
+def test_get_product_by_id_handles_data_as_object_or_missing_items():
+    def handler(request):
+        return httpx.Response(200, json={"data": {"upc": "0001", "description": "X", "items": []}})
+
+    prod = _client(handler).get_product_by_id("tok", "0001", "L1")
+    assert prod.upc == "0001"
+    assert prod.price is None
+    assert prod.promo is None
+    assert prod.size is None
+
+
+def test_get_product_by_id_5xx_raises_unavailable():
+    def handler(request):
+        return httpx.Response(503, json={})
+
+    with pytest.raises(KrogerUnavailableError):
+        _client(handler).get_product_by_id("tok", "0001", "L1")

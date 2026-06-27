@@ -167,7 +167,9 @@ class KrogerClient:
                 continue
             items = row.get("items") or []
             first = items[0] if items else {}
-            price = (first.get("price") or {}).get("regular")
+            price_obj = first.get("price") or {}
+            price = price_obj.get("regular")
+            promo = price_obj.get("promo")
             stock = (first.get("inventory") or {}).get("stockLevel")
             out.append(
                 Product(
@@ -175,9 +177,37 @@ class KrogerClient:
                     description=row.get("description", ""),
                     size=first.get("size"),
                     price=price,
+                    promo=promo,
                     stock_level=stock,
                     brand=row.get("brand"),
                     image_url=_extract_image_url(row.get("images")),
                 )
             )
         return out
+
+    def get_product_by_id(self, token: str, upc: str, location_id: str) -> Product:
+        """Fetch a single product's detail (price/promo/stock/size) for a known UPC at a
+        store. The /products/{id} endpoint accepts a UPC as the id and returns a single
+        object under 'data'. Used to price the acceptable alternatives of a multi-UPC item."""
+        resp = self._http.get(
+            f"/v1/products/{upc}",
+            params={"filter.locationId": location_id},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self._raise_for_status(resp)
+        row = resp.json().get("data") or {}
+        if isinstance(row, list):  # tolerate either shape the API may return
+            row = row[0] if row else {}
+        items = row.get("items") or []
+        first = items[0] if items else {}
+        price_obj = first.get("price") or {}
+        return Product(
+            upc=row.get("upc", upc),
+            description=row.get("description", ""),
+            size=first.get("size"),
+            price=price_obj.get("regular"),
+            promo=price_obj.get("promo"),
+            stock_level=(first.get("inventory") or {}).get("stockLevel"),
+            brand=row.get("brand"),
+            image_url=_extract_image_url(row.get("images")),
+        )
