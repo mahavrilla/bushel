@@ -3,11 +3,13 @@ from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
 
+import pytest
+
 from app.db import get_db
 from app.kroger.schemas import Product, TokenResp
 from app.kroger.router import get_kroger_client
 from app.main import app
-from app.models import GroceryList, GroceryListItem, Ingredient, KrogerAuth
+from app.models import GroceryList, GroceryListItem, Ingredient, IngredientProductMap, KrogerAuth
 from app.settings import service as settings_service
 
 
@@ -116,4 +118,75 @@ def test_search_products_auth_error_is_502(db_session):
     client = _client(db_session, kroger)
     resp = client.get(f"/list/items/{it.id}/products", params={"q": "flour"})
     assert resp.status_code == 502
+    app.dependency_overrides.clear()
+
+
+# ---------------------------------------------------------------------------
+# Fixture + tests for add/remove/switch-alternative endpoints (Task 8)
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def seeded_two_upc_item(db_session):
+    """Draft list with one item that has two acceptable UPC mappings (REG is_default, ORG)."""
+    ing = Ingredient(canonical_name="milk", aliases=[], category="dairy")
+    db_session.add(ing)
+    db_session.flush()
+    gl = GroceryList(name="Draft", status="draft", store_location_id="L1")
+    db_session.add(gl)
+    db_session.flush()
+    it = GroceryListItem(
+        list_id=gl.id, ingredient_id=ing.id, total_qty=1.0,
+        total_unit="gal", purchase_qty=1, kroger_upc="REG", pantry_status="needed",
+    )
+    db_session.add(it)
+    db_session.flush()
+    db_session.add(IngredientProductMap(
+        ingredient_id=ing.id, kroger_upc="REG", kroger_description="Regular Milk",
+        package_size="1 gal", is_default=True,
+    ))
+    db_session.add(IngredientProductMap(
+        ingredient_id=ing.id, kroger_upc="ORG", kroger_description="Organic Milk",
+        package_size="1 gal", is_default=False,
+    ))
+    db_session.flush()
+    yield it.id
+
+
+def test_add_alternative_endpoint_adds_mapping(db_session, seeded_two_upc_item):
+    item_id = seeded_two_upc_item
+    client = _client(db_session)
+    resp = client.post(
+        f"/list/items/{item_id}/alternatives",
+        json={"kroger_upc": "VAN", "kroger_description": "Vanilla", "package_size": "32 fl oz"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    alts = body["items"][0]["alternatives"]
+    assert "VAN" in {a["upc"] for a in alts}
+    app.dependency_overrides.clear()
+
+
+def test_switch_pick_endpoint_changes_current(db_session, seeded_two_upc_item):
+    item_id = seeded_two_upc_item
+    client = _client(db_session)
+    resp = client.post(f"/list/items/{item_id}/pick", json={"kroger_upc": "ORG"})
+    assert resp.status_code == 200
+    assert resp.json()["items"][0]["kroger_upc"] == "ORG"
+    app.dependency_overrides.clear()
+
+
+def test_switch_pick_endpoint_rejects_bad_upc(db_session, seeded_two_upc_item):
+    item_id = seeded_two_upc_item
+    client = _client(db_session)
+    resp = client.post(f"/list/items/{item_id}/pick", json={"kroger_upc": "NOPE"})
+    assert resp.status_code == 409
+    app.dependency_overrides.clear()
+
+
+def test_remove_alternative_endpoint(db_session, seeded_two_upc_item):
+    item_id = seeded_two_upc_item
+    client = _client(db_session)
+    resp = client.delete(f"/list/items/{item_id}/alternatives/ORG")
+    assert resp.status_code == 200
+    assert "ORG" not in {a["upc"] for a in resp.json()["items"][0]["alternatives"]}
     app.dependency_overrides.clear()
