@@ -9,6 +9,7 @@ services:
       - "5432:5432"
     volumes:
       - bushel_pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 5s
@@ -24,8 +25,7 @@ services:
       KROGER_CLIENT_SECRET: ${KROGER_CLIENT_SECRET}
       KROGER_REDIRECT_URI: ${KROGER_REDIRECT_URI}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-    ports:
-      - "8000:8000"
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
@@ -37,8 +37,18 @@ services:
         VITE_API_URL: ${VITE_API_URL}
     ports:
       - "5173:80"
+    restart: unless-stopped
     depends_on:
       - api
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN}
+    restart: unless-stopped
+    depends_on:
+      - web
 
 volumes:
   bushel_pgdata:
