@@ -45,6 +45,16 @@ class ConfirmRequest(BaseModel):
     package_size: str | None = None
 
 
+class AddAlternativeRequest(BaseModel):
+    kroger_upc: str
+    kroger_description: str | None = None
+    package_size: str | None = None
+
+
+class SwitchPickRequest(BaseModel):
+    kroger_upc: str
+
+
 class SendRequest(BaseModel):
     modality: str = "PICKUP"
 

@@ -14,12 +14,14 @@ from app.settings import service as settings_service
 from app.kroger.client import KrogerAuthError, KrogerClient, KrogerError
 from app.matching.purchase import compute_purchase_qty
 from app.matching.schemas import (
+    AddAlternativeRequest,
     ConfirmRequest,
     MatchItemRead,
     MatchRead,
     ProductChoice,
     SendItemResult,
     SendResult,
+    SwitchPickRequest,
 )
 from app.models import GroceryList, GroceryListItem, Ingredient, IngredientProductMap, PurchaseLog
 
@@ -30,6 +32,10 @@ class ItemNotFoundError(Exception):
 
 class NoStoreSelectedError(Exception):
     """A store must be chosen on the draft before searching products."""
+
+
+class UpcNotAcceptableError(Exception):
+    """The requested UPC is not in the ingredient's acceptable set."""
 
 
 def _kept_items(db: Session, list_id: int) -> list[GroceryListItem]:
@@ -172,6 +178,66 @@ def confirm_product(db: Session, item_id: int, req: ConfirmRequest) -> None:
     qty, estimated = compute_purchase_qty(item.total_qty, item.total_unit, req.package_size)
     item.purchase_qty = qty
     item.purchase_qty_estimated = estimated
+    db.flush()
+
+
+def add_alternative(db: Session, item_id: int, req: AddAlternativeRequest) -> None:
+    """Bless a product as an acceptable alternative for the item's ingredient. No-op if the
+    UPC is already mapped. Never changes the current pick."""
+    item = _get_item(db, item_id)
+    existing = {m.kroger_upc for m in _acceptable_maps(db, item.ingredient_id)}
+    if req.kroger_upc in existing:
+        return
+    db.add(
+        IngredientProductMap(
+            ingredient_id=item.ingredient_id,
+            kroger_upc=req.kroger_upc,
+            kroger_description=req.kroger_description,
+            package_size=req.package_size,
+            is_default=False,
+        )
+    )
+    db.flush()
+
+
+def switch_pick(db: Session, item_id: int, upc: str) -> None:
+    """Set the item's current pick to an acceptable UPC and recompute purchase_qty. Does not
+    write purchase history — the last-purchased default only changes when a trip is sent."""
+    item = _get_item(db, item_id)
+    rows = _acceptable_maps(db, item.ingredient_id)
+    row = next((r for r in rows if r.kroger_upc == upc), None)
+    if row is None:
+        raise UpcNotAcceptableError(f"{upc} is not an acceptable product for this ingredient")
+    item.kroger_upc = upc
+    qty, estimated = compute_purchase_qty(item.total_qty, item.total_unit, row.package_size)
+    item.purchase_qty = qty
+    item.purchase_qty_estimated = estimated
+    db.flush()
+
+
+def remove_alternative(db: Session, item_id: int, upc: str) -> None:
+    """Drop a UPC from the acceptable set. If it was the current pick, re-resolve the default
+    (which may leave the item with no pick)."""
+    item = _get_item(db, item_id)
+    row = next(
+        (r for r in _acceptable_maps(db, item.ingredient_id) if r.kroger_upc == upc), None
+    )
+    if row is None:
+        return
+    db.delete(row)
+    db.flush()
+    if item.kroger_upc == upc:
+        new_upc = _resolve_default_upc(db, item.ingredient_id)
+        item.kroger_upc = new_upc
+        new_row = next(
+            (r for r in _acceptable_maps(db, item.ingredient_id) if r.kroger_upc == new_upc),
+            None,
+        )
+        qty, estimated = compute_purchase_qty(
+            item.total_qty, item.total_unit, new_row.package_size if new_row else None
+        )
+        item.purchase_qty = qty
+        item.purchase_qty_estimated = estimated
     db.flush()
 
 

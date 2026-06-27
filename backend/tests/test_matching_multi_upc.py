@@ -1,6 +1,9 @@
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 from app.matching import service
+from app.matching.schemas import AddAlternativeRequest
 from app.models import (
     GroceryList,
     GroceryListItem,
@@ -103,3 +106,76 @@ def test_current_choice_matches_item_upc_not_first_row(db_session):
     current = service.get_match_state(db_session).items[0].current
     assert current.upc == "ORG"
     assert current.description == "Organic"
+
+
+def test_add_alternative_appends_row_without_changing_pick(db_session):
+    gl, ing, item = _draft_with_item(db_session)
+    _two_alts(db_session, ing)
+    item.kroger_upc = "REG"
+    db_session.flush()
+    service.add_alternative(db_session, item.id,
+                            AddAlternativeRequest(kroger_upc="VAN", kroger_description="Vanilla",
+                                                  package_size="32 fl oz"))
+    db_session.flush()
+    upcs = {m.kroger_upc for m in service._acceptable_maps(db_session, ing.id)}
+    assert upcs == {"REG", "ORG", "VAN"}
+    db_session.refresh(item)
+    assert item.kroger_upc == "REG"  # pick unchanged
+
+
+def test_add_alternative_is_idempotent_on_duplicate_upc(db_session):
+    gl, ing, item = _draft_with_item(db_session)
+    _two_alts(db_session, ing)
+    service.add_alternative(db_session, item.id, AddAlternativeRequest(kroger_upc="REG"))
+    db_session.flush()
+    assert len(service._acceptable_maps(db_session, ing.id)) == 2
+
+
+def test_switch_pick_sets_item_upc_and_recomputes_qty(db_session):
+    gl, ing, item = _draft_with_item(db_session, total_qty=2.0, total_unit="bottle")
+    _two_alts(db_session, ing)
+    item.kroger_upc = "REG"
+    db_session.flush()
+    service.switch_pick(db_session, item.id, "ORG")
+    db_session.refresh(item)
+    assert item.kroger_upc == "ORG"
+    assert item.purchase_qty >= 1
+
+
+def test_switch_pick_rejects_non_acceptable_upc(db_session):
+    gl, ing, item = _draft_with_item(db_session)
+    _two_alts(db_session, ing)
+    with pytest.raises(service.UpcNotAcceptableError):
+        service.switch_pick(db_session, item.id, "NOPE")
+
+
+def test_switch_pick_does_not_write_purchase_log(db_session):
+    gl, ing, item = _draft_with_item(db_session)
+    _two_alts(db_session, ing)
+    item.kroger_upc = "REG"
+    db_session.flush()
+    service.switch_pick(db_session, item.id, "ORG")
+    assert db_session.query(PurchaseLog).count() == 0
+
+
+def test_remove_alternative_repoints_pick_when_removing_current(db_session):
+    gl, ing, item = _draft_with_item(db_session)
+    _two_alts(db_session, ing)  # REG is_default
+    item.kroger_upc = "ORG"
+    db_session.flush()
+    service.remove_alternative(db_session, item.id, "ORG")
+    db_session.refresh(item)
+    assert item.kroger_upc == "REG"  # re-resolved to remaining default
+    assert {m.kroger_upc for m in service._acceptable_maps(db_session, ing.id)} == {"REG"}
+
+
+def test_remove_last_alternative_clears_pick(db_session):
+    gl, ing, item = _draft_with_item(db_session)
+    db_session.add(IngredientProductMap(ingredient_id=ing.id, kroger_upc="ONLY",
+                                        package_size="1 ct", is_default=True))
+    db_session.flush()
+    item.kroger_upc = "ONLY"
+    db_session.flush()
+    service.remove_alternative(db_session, item.id, "ONLY")
+    db_session.refresh(item)
+    assert item.kroger_upc is None
