@@ -27,11 +27,15 @@ export function ProductPickerModal({
   ingredientName,
   onChoose,
   onClose,
+  title = "Choose a product",
+  chooseLabel = "Choose",
 }: {
   itemId: number;
   ingredientName: string | null;
   onChoose: (product: ProductChoice) => void | Promise<void>;
   onClose: () => void;
+  title?: string;
+  chooseLabel?: string;
 }) {
   const [query, setQuery] = useState(ingredientName ?? "");
   const [results, setResults] = useState<ProductChoice[]>([]);
@@ -78,7 +82,7 @@ export function ProductPickerModal({
   if (sort === "price") view = [...view].sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity));
 
   return (
-    <Modal title="Choose a product" onClose={onClose}>
+    <Modal title={title} onClose={onClose}>
       <form onSubmit={onSubmit} className="mb-3 flex items-end gap-2">
         <Input
           type="search"
@@ -139,7 +143,7 @@ export function ProductPickerModal({
               </div>
             </div>
             <Button variant="secondary" onClick={() => onChoose(item)}>
-              Choose
+              {chooseLabel}
             </Button>
           </li>
         ))}
