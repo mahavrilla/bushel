@@ -39,12 +39,44 @@ def _kept_items(db: Session, list_id: int) -> list[GroceryListItem]:
     return [r for r in rows if r.pantry_status != "skipped"]
 
 
+def _acceptable_maps(db: Session, ingredient_id: int) -> list[IngredientProductMap]:
+    return db.execute(
+        select(IngredientProductMap)
+        .where(IngredientProductMap.ingredient_id == ingredient_id)
+        .order_by(IngredientProductMap.id)
+    ).scalars().all()
+
+
+def _resolve_default_upc(db: Session, ingredient_id: int) -> str | None:
+    """Default pick = most recently purchased acceptable UPC, else the is_default row,
+    else the first row. Purchases of UPCs no longer in the acceptable set are ignored."""
+    rows = _acceptable_maps(db, ingredient_id)
+    if not rows:
+        return None
+    acceptable = {r.kroger_upc for r in rows}
+    last = db.execute(
+        select(PurchaseLog)
+        .where(
+            PurchaseLog.ingredient_id == ingredient_id,
+            PurchaseLog.kroger_upc.in_(acceptable),
+        )
+        .order_by(PurchaseLog.purchased_at.desc())
+    ).scalars().first()
+    if last is not None and last.kroger_upc is not None:
+        return last.kroger_upc
+    default_row = next((r for r in rows if r.is_default), None)
+    if default_row is not None:
+        return default_row.kroger_upc
+    return rows[0].kroger_upc
+
+
 def _current_choice(db: Session, item: GroceryListItem) -> ProductChoice | None:
     if item.kroger_upc is None:
         return None
     mapping = db.execute(
         select(IngredientProductMap).where(
-            IngredientProductMap.ingredient_id == item.ingredient_id
+            IngredientProductMap.ingredient_id == item.ingredient_id,
+            IngredientProductMap.kroger_upc == item.kroger_upc,
         )
     ).scalars().first()
     if mapping is None:
@@ -57,21 +89,24 @@ def _current_choice(db: Session, item: GroceryListItem) -> ProductChoice | None:
 
 
 def apply_remembered_products(db: Session) -> None:
-    """Re-derive kroger_upc + purchase_qty from the remembered ingredient_product_map for
-    unresolved kept items. Idempotent; this is how confirmed picks survive list rebuilds."""
+    """Fill unresolved kept items with the resolved default UPC (last-purchased → is_default →
+    first) and recompute purchase_qty from that product's package size. Idempotent; existing
+    picks are left untouched so a user's switch survives list rebuilds."""
     draft = get_or_create_draft(db)
-    maps = {
-        m.ingredient_id: m
-        for m in db.execute(select(IngredientProductMap)).scalars().all()
-    }
     for item in _kept_items(db, draft.id):
         if item.kroger_upc is not None:
             continue
-        mapping = maps.get(item.ingredient_id)
-        if mapping is None:
+        upc = _resolve_default_upc(db, item.ingredient_id)
+        if upc is None:
             continue
-        item.kroger_upc = mapping.kroger_upc
-        qty, estimated = compute_purchase_qty(item.total_qty, item.total_unit, mapping.package_size)
+        row = next(
+            (r for r in _acceptable_maps(db, item.ingredient_id) if r.kroger_upc == upc),
+            None,
+        )
+        item.kroger_upc = upc
+        qty, estimated = compute_purchase_qty(
+            item.total_qty, item.total_unit, row.package_size if row else None
+        )
         item.purchase_qty = qty
         item.purchase_qty_estimated = estimated
     db.flush()
