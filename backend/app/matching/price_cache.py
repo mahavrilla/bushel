@@ -7,6 +7,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
+import httpx
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -66,11 +67,14 @@ def get_prices(
             stale.append(upc)
 
     if stale and client is not None:
-        token = client.fetch_client_token()
+        try:
+            token = client.fetch_client_token()
+        except (KrogerError, httpx.HTTPError):
+            return out  # serve cached; missing UPCs surface as "price unavailable"
         for upc in stale:
             try:
                 prod = client.get_product_by_id(token.access_token, upc, location_id)
-            except KrogerError:
+            except (KrogerError, httpx.HTTPError):
                 continue  # leave this UPC absent; caller shows "price unavailable"
             row = by_upc.get(upc) or PriceCache(kroger_upc=upc, location_id=location_id)
             row.regular_cents = to_cents(prod.price)

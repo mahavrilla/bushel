@@ -67,3 +67,24 @@ def test_no_client_returns_only_cached(db_session):
     db_session.flush()
     out = price_cache.get_prices(db_session, None, ["0001", "0002"], "L1", now=NOW)
     assert "0001" in out and "0002" not in out
+
+
+def test_token_failure_degrades_to_cached(db_session):
+    """fetch_client_token raising KrogerUnavailableError must NOT propagate; the already-fresh
+    cached row for '0001' must be returned and '0002' (not cached) must simply be absent."""
+    from app.kroger.client import KrogerUnavailableError
+
+    db_session.add(PriceCache(kroger_upc="0001", location_id="L1", regular_cents=299,
+                              promo_cents=None, size_text="16 oz", stock_level="HIGH",
+                              fetched_at=NOW - timedelta(hours=1)))  # fresh
+    db_session.flush()
+
+    client = MagicMock()
+    client.fetch_client_token.side_effect = KrogerUnavailableError("down")
+
+    out = price_cache.get_prices(db_session, client, ["0001", "0002"], "L1", now=NOW)
+
+    assert not client.get_product_by_id.called, "get_product_by_id must not be called after token failure"
+    assert "0001" in out, "cached fresh row must still be returned"
+    assert out["0001"].regular_cents == 299
+    assert "0002" not in out, "uncached UPC must be absent, not raise"

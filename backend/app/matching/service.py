@@ -25,7 +25,6 @@ from app.matching.schemas import (
     ProductChoice,
     SendItemResult,
     SendResult,
-    SwitchPickRequest,
 )
 from app.models import GroceryList, GroceryListItem, Ingredient, IngredientProductMap, PurchaseLog
 

@@ -65,12 +65,17 @@ def search_products(
 
 
 @router.post("/items/{item_id}/product", response_model=MatchRead)
-def confirm_product(item_id: int, body: ConfirmRequest, db: Session = Depends(get_db)):
+def confirm_product(
+    item_id: int,
+    body: ConfirmRequest,
+    db: Session = Depends(get_db),
+    kroger: KrogerClient = Depends(get_kroger_client),
+):
     try:
         service.confirm_product(db, item_id, body)
     except service.ItemNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
-    state = service.get_match_state(db)
+    state = service.get_match_state(db, kroger)
     db.commit()
     return state
 
