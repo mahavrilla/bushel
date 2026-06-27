@@ -195,6 +195,35 @@ export async function confirmProduct(
   return json<MatchData>(res);
 }
 
+export async function addAlternative(
+  itemId: number,
+  body: ConfirmProductBody,
+): Promise<MatchData> {
+  const res = await fetch(`${BASE_URL}/list/items/${itemId}/alternatives`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return json<MatchData>(res);
+}
+
+export async function switchPick(itemId: number, upc: string): Promise<MatchData> {
+  const res = await fetch(`${BASE_URL}/list/items/${itemId}/pick`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ kroger_upc: upc }),
+  });
+  return json<MatchData>(res);
+}
+
+export async function removeAlternative(itemId: number, upc: string): Promise<MatchData> {
+  const res = await fetch(
+    `${BASE_URL}/list/items/${itemId}/alternatives/${encodeURIComponent(upc)}`,
+    { method: "DELETE" },
+  );
+  return json<MatchData>(res);
+}
+
 export async function setStore(locationId: string, name?: string | null): Promise<MatchData> {
   const res = await fetch(`${BASE_URL}/list/store`, {
     method: "POST",
