@@ -51,7 +51,8 @@ def test_callback_exchanges_code_and_saves(db_session):
     kr._PENDING_STATES.add("STATE123")
     resp = client.get("/auth/callback", params={"code": "c", "state": "STATE123"},
                       follow_redirects=False)
-    assert resp.status_code in (200, 307)
+    assert resp.status_code == 307
+    assert resp.headers["location"] == "/kroger"
     assert db_session.query(KrogerAuth).count() == 1
     kroger.exchange_code.assert_called_once_with("c")
     app.dependency_overrides.clear()

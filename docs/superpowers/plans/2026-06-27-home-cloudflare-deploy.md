@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make Bushel deployable on a home box behind a Cloudflare Tunnel at `https://bushel.havrilla.dev` — single-origin (no baked-in IP), the Kroger OAuth callback host-independent, photos uploadable through nginx, and the stack self-restarting.
+**Goal:** Make Bushel deployable on a home box behind a Cloudflare Tunnel at `https://bushel.havsfamily.com` — single-origin (no baked-in IP), the Kroger OAuth callback host-independent, photos uploadable through nginx, and the stack self-restarting.
 
 **Architecture:** The `web` nginx becomes a reverse proxy (`/api/*` → `api:8000`) so the SPA and API share one origin and the frontend uses a relative `VITE_API_URL=/api`. A `cloudflared` service fronts the stack via an outbound tunnel. The Kroger callback redirects to a relative path. Cloudflare Access (dashboard, not code) gates the hostname.
 
@@ -264,7 +264,7 @@ CORS_ORIGINS=["http://localhost:5173"]
 KROGER_CLIENT_ID=
 KROGER_CLIENT_SECRET=
 # Local: http://localhost:8000/auth/callback
-# Tunnel deploy: https://bushel.havrilla.dev/api/auth/callback
+# Tunnel deploy: https://bushel.havsfamily.com/api/auth/callback
 KROGER_REDIRECT_URI=http://localhost:8000/auth/callback
 
 # Anthropic (Claude) — recipe/ingredient parsing and photo reading
@@ -284,7 +284,7 @@ TUNNEL_TOKEN=
 In `README.md`, immediately after the "Using it from your phone / home network" subsection (it ends with the paragraph about an always-on setup / Tailscale), insert this new subsection:
 
 ```markdown
-### Deploy on a home box via Cloudflare (always-on, at bushel.havrilla.dev)
+### Deploy on a home box via Cloudflare (always-on, at bushel.havsfamily.com)
 
 Run the stack on any always-on machine that has Docker, fronted by a Cloudflare Tunnel — no
 port-forwarding, no static IP, automatic HTTPS, and login-gating via Cloudflare Access. The web
@@ -293,15 +293,15 @@ an address.
 
 1. **Box:** install Docker + Docker Compose on the host (Pi, mini-PC, or old laptop — images are
    multi-arch).
-2. **Cloudflare Tunnel:** with `havrilla.dev` on Cloudflare, go to **Zero Trust → Networks →
+2. **Cloudflare Tunnel:** with `havsfamily.com` on Cloudflare, go to **Zero Trust → Networks →
    Tunnels**, create a tunnel, and copy its token into `.env` as `TUNNEL_TOKEN`. Add a public
-   hostname `bushel.havrilla.dev` → service `http://web:80`.
+   hostname `bushel.havsfamily.com` → service `http://web:80`.
 3. **Cloudflare Access (login-gating):** in **Zero Trust → Access → Applications**, add an app
-   for `bushel.havrilla.dev` with two policies — a **Bypass** rule for your home public IP (so
+   for `bushel.havsfamily.com` with two policies — a **Bypass** rule for your home public IP (so
    you're auto-logged-in on your Wi-Fi) and an **Allow** rule for your email (login required
    elsewhere).
 4. **Kroger:** in the Kroger developer portal, add redirect URI
-   `https://bushel.havrilla.dev/api/auth/callback`. Set `KROGER_REDIRECT_URI` to the same value
+   `https://bushel.havsfamily.com/api/auth/callback`. Set `KROGER_REDIRECT_URI` to the same value
    in `.env`.
 5. **Env:** in `.env`, set `VITE_API_URL=/api`, the `KROGER_REDIRECT_URI` above, and
    `TUNNEL_TOKEN`. Then on the box:
@@ -310,7 +310,7 @@ an address.
    docker compose up -d --build
    ```
 
-Open `https://bushel.havrilla.dev`. The DHCP/IP problem is gone — the tunnel dials out and the
+Open `https://bushel.havsfamily.com`. The DHCP/IP problem is gone — the tunnel dials out and the
 app is same-origin, so the host's address never matters.
 ```
 

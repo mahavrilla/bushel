@@ -8,7 +8,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.config import get_settings
 from app.db import get_db
 from app.kroger import auth
 from app.kroger.client import KrogerAuthError, KrogerClient, KrogerError
@@ -58,9 +57,8 @@ def callback(
         raise HTTPException(status_code=502, detail=f"Kroger token exchange failed: {exc}")
     auth.save_tokens(db, token)
     db.commit()
-    # Send the user back to the web app (functional; Phase 6 polishes this).
-    origins = get_settings().cors_origins
-    return RedirectResponse(url=origins[0] if origins else "/", status_code=307)
+    # Send the user back to the web app. Relative so it works behind the tunnel / any host.
+    return RedirectResponse(url="/kroger", status_code=307)
 
 
 @router.get("/kroger/locations", response_model=list[Location])
